@@ -138,12 +138,8 @@ diag_service_file() {
 diag_port_conflicts() {
     log_section "Port Conflict Check"
 
-    local port="22"
-    if [[ -f "$CONFIG_FILE" ]]; then
-        local cfg_port
-        cfg_port="$(grep -i "^Port " "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | head -1)"
-        [[ -n "$cfg_port" ]] && port="$cfg_port"
-    fi
+    local port
+    port="$(_configured_port)"
     log_info "  Checking port ${port}..."
 
     local listeners=""

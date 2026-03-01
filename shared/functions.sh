@@ -44,6 +44,17 @@ _sshd_pid() {
     pgrep -f "${SBIN_DIR}/sshd" 2>/dev/null | head -1 || true
 }
 
+# _configured_port — read the sshd port from CONFIG_FILE, defaulting to 22.
+_configured_port() {
+    local port="22"
+    if [[ -f "$CONFIG_FILE" ]]; then
+        local cfg_port
+        cfg_port="$(grep -i "^Port " "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | head -1)"
+        [[ -n "$cfg_port" ]] && port="$cfg_port"
+    fi
+    echo "$port"
+}
+
 # Shared functions
 list_algorithms() {
     echo "Available algorithms:"

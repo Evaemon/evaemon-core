@@ -14,16 +14,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-_configured_port() {
-    local port="22"
-    if [[ -f "$CONFIG_FILE" ]]; then
-        local cfg_port
-        cfg_port="$(grep -i "^Port " "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | head -1)"
-        [[ -n "$cfg_port" ]] && port="$cfg_port"
-    fi
-    echo "$port"
-}
-
 # ── Monitoring sections ───────────────────────────────────────────────────────
 
 show_service_status() {
