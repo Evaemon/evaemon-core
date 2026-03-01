@@ -13,9 +13,9 @@ INSTALL_PREFIX="${BUILD_DIR}"
 # Repository information
 LIBOQS_REPO="https://github.com/open-quantum-safe/liboqs.git"
 # Use the release tag that matches OQS-OpenSSH OQS-v9.
-# liboqs 0.10.1 still has the sphincs_sha2_*_simple naming that OQS-v9 expects.
+# MAYO support (required by OQS-v9) was added in liboqs 0.11.0; 0.10.1 lacks it.
 # When upgrading OPENSSH_BRANCH, update this tag to the matching liboqs release.
-LIBOQS_BRANCH="0.10.1"
+LIBOQS_BRANCH="0.11.0"
 
 OPENSSH_REPO="https://github.com/open-quantum-safe/openssh.git"
 OPENSSH_BRANCH="OQS-v9"
@@ -26,8 +26,8 @@ SSH_DIR="${HOME}/.ssh"
 
 # Supported algorithms
 # Algorithm names must match the key types built into OQS-OpenSSH OQS-v9 with
-# liboqs 0.10.1. ML-DSA names (mldsa44/66) are only available in liboqs 0.11+;
-# they are intentionally omitted here to avoid key-generation failures.
+# liboqs 0.11.0. ML-DSA names (mldsa44/66/87) exist but are intentionally
+# omitted — use dilithium2/3/5 which are the stable aliases in OQS-v9.
 ALGORITHMS=(
     "ssh-falcon1024"
     "ssh-dilithium5"
