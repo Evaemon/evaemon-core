@@ -30,6 +30,20 @@ retry_with_backoff() {
     return 1
 }
 
+# _sshd_pid — return the PID of the running evaemon sshd, or empty if not running.
+# Checks the PID file first, then falls back to pgrep.
+_sshd_pid() {
+    if [[ -f "$PID_FILE" ]]; then
+        local pid
+        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            echo "$pid"
+            return
+        fi
+    fi
+    pgrep -f "${SBIN_DIR}/sshd" 2>/dev/null | head -1 || true
+}
+
 # Shared functions
 list_algorithms() {
     echo "Available algorithms:"

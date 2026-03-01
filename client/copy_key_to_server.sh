@@ -56,26 +56,26 @@ copy_client_key() {
 
 main() {
     echo "Copy Client Key to Server"
-    read -p "Enter the server IP address: " server_host
+    read -rp "Enter the server IP address: " server_host
     validate_ip "$server_host" || exit 1
 
-    read -p "Enter the server username: " server_user
+    read -rp "Enter the server username: " server_user
     validate_username "$server_user" || exit 1
 
-    read -p "Enter the server SSH port [22]: " server_port
+    read -rp "Enter the server SSH port [22]: " server_port
     server_port=${server_port:-22}
     validate_port "$server_port" || exit 1
 
     echo -e "\nSelect the post-quantum algorithm:"
     list_algorithms
-    read -p "Enter algorithm number: " alg_choice
+    read -rp "Enter algorithm number: " alg_choice
     validate_algorithm_choice "$alg_choice" "${#ALGORITHMS[@]}" || exit 1
     local algorithm="${ALGORITHMS[$((alg_choice-1))]}"
     log_info "Selected algorithm: ${algorithm}"
 
     echo -e "\nSelect the public key to copy:"
     list_keys
-    read -p "Select a key by number: " choice
+    read -rp "Select a key by number: " choice
     local keys=()
     while IFS= read -r -d '' f; do
         keys+=("$f")

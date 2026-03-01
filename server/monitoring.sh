@@ -14,29 +14,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-# ── Server-local constants ────────────────────────────────────────────────────
-KEY_DIR="${BUILD_DIR}/etc/keys"
-CONFIG_DIR="${BUILD_DIR}/etc"
-CONFIG_FILE="${CONFIG_DIR}/sshd_config"
-PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
-SERVICE_NAME="evaemon-sshd"
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-_sshd_pid() {
-    # Return the PID of the running sshd, or empty if not running
-    if [[ -f "$PID_FILE" ]]; then
-        local pid
-        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            echo "$pid"
-            return
-        fi
-    fi
-    # Fallback: pgrep against our sshd binary
-    pgrep -f "${SBIN_DIR}/sshd" 2>/dev/null | head -1 || true
-}
-
 _configured_port() {
     local port="22"
     if [[ -f "$CONFIG_FILE" ]]; then

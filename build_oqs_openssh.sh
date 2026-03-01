@@ -19,12 +19,17 @@ install_dependencies() {
     if [ -f /etc/debian_version ]; then
         sudo apt-get update
         sudo apt-get install -y autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git doxygen graphviz
-        sudo mkdir -p -m 0755 /var/empty
-        if ! getent group sshd >/dev/null; then sudo groupadd sshd; fi
-        if ! getent passwd sshd >/dev/null; then sudo useradd -g sshd -c 'sshd privsep' -d /var/empty -s /bin/false sshd; fi
+    elif [ -f /etc/redhat-release ]; then
+        sudo dnf install -y autoconf automake cmake gcc libtool openssl-devel make ninja-build zlib-devel git doxygen graphviz pkg-config
     else
-        log_warn "Non-Debian system detected. Please install dependencies manually."
+        log_warn "Unsupported distribution. Please install dependencies manually."
+        log_warn "Required: autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git"
     fi
+
+    # Ensure the sshd privilege-separation user and directory exist
+    sudo mkdir -p -m 0755 /var/empty
+    if ! getent group sshd >/dev/null; then sudo groupadd sshd; fi
+    if ! getent passwd sshd >/dev/null; then sudo useradd -g sshd -c 'sshd privsep' -d /var/empty -s /bin/false sshd; fi
 }
 
 # Copy necessary shared libraries

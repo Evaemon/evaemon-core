@@ -63,3 +63,11 @@ KEX_ALGORITHMS=(
 # Note: diffie-hellman-group14-sha256 (2048-bit DH) is intentionally excluded
 # — it is deprecated per NIST SP 800-77r1; group16 (4096-bit) is the minimum.
 CLASSICAL_KEX_ALGORITHMS="curve25519-sha256,ecdh-sha2-nistp384,diffie-hellman-group16-sha512"
+
+# Server paths — shared across server setup, monitoring, update, and diagnostics
+KEY_DIR="${BUILD_DIR}/etc/keys"
+CONFIG_DIR="${BUILD_DIR}/etc"
+CONFIG_FILE="${CONFIG_DIR}/sshd_config"
+PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
+SERVICE_NAME="evaemon-sshd"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
