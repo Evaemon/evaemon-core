@@ -82,6 +82,12 @@ main() {
     log_info "Cloning OpenSSH..."
     git clone --branch "${OPENSSH_BRANCH}" --single-branch --depth 1 "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
 
+    # Patch configure.ac to accept OpenSSL 3.5+ (upstream check only tested up to 3.3/3.4).
+    # Downgrade the hard error to a warning so the build continues on newer OpenSSL.
+    sed -i \
+        's/AC_MSG_ERROR(\[Unknown\/unsupported OpenSSL/AC_MSG_WARN([Unknown\/unsupported OpenSSL/' \
+        "${BUILD_DIR}/openssh/configure.ac" || true
+
     # Step 4: Build OpenSSH
     log_info "Building OpenSSH..."
     cd "${BUILD_DIR}/openssh"
