@@ -22,7 +22,14 @@ OPENSSH_BRANCH="OQS-v9"
 
 # System directories
 OPENSSL_SYS_DIR="/usr"
-SSH_DIR="${HOME}/.ssh"
+# When a script is invoked via sudo, $HOME resolves to /root rather than the
+# invoking user's home directory.  Use $SUDO_USER (set by sudo) to find the
+# real home so all scripts consistently look in the correct ~/.ssh directory.
+if [[ -n "${SUDO_USER}" ]]; then
+    SSH_DIR="$(getent passwd "${SUDO_USER}" | cut -d: -f6)/.ssh"
+else
+    SSH_DIR="${HOME}/.ssh"
+fi
 
 # Supported algorithms
 # Algorithm names must match the key types built into OQS-OpenSSH OQS-v9 with
