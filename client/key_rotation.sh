@@ -148,6 +148,7 @@ archive_old_key() {
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 main() {
+    require_oqs_build
     log_section "Post-Quantum SSH Key Rotation"
 
     read -rp "Server host/IP: " server_host

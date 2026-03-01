@@ -94,3 +94,13 @@ list_algorithms() {
         esac
     done
 }
+
+# require_oqs_build — abort with a helpful message if OQS-OpenSSH has not
+# been built yet.  Call this at the top of any script that invokes binaries
+# from ${BIN_DIR} or ${SBIN_DIR}.
+require_oqs_build() {
+    if [[ ! -x "${BIN_DIR}/ssh" ]]; then
+        log_fatal "OQS-OpenSSH is not installed (${BIN_DIR}/ssh not found)." \
+                  "Run option 1 — 'Build and install OQS-OpenSSH' — first."
+    fi
+}

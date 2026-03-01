@@ -178,6 +178,7 @@ print_summary() {
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 main() {
+    require_oqs_build
     log_section "Post-Quantum SSH Health Check"
 
     read -rp "Enter the server host/IP: " server_host

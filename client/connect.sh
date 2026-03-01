@@ -7,6 +7,7 @@ source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
 connect() {
+    require_oqs_build
     echo "Post-Quantum SSH Connection Tool"
     echo "--------------------------------"
 

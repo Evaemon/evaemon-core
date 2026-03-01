@@ -54,6 +54,7 @@ generate_key() {
 
 # Main function
 main() {
+    require_oqs_build
     echo "Select key type:"
     echo "1. Post-quantum key"
     echo "2. Classical key (Ed25519 or RSA)"
