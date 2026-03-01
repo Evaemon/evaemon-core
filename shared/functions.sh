@@ -64,12 +64,6 @@ list_algorithms() {
             "ssh-falcon1024")
                 echo "   ↳ Recommended: Fast lattice-based signing, NIST Level 5 security"
                 ;;
-            "ssh-mldsa66")
-                echo "   ↳ Modified LDS scheme, higher security variant"
-                ;;
-            "ssh-mldsa44")
-                echo "   ↳ Modified LDS scheme, balanced security/performance"
-                ;;
             "ssh-dilithium5")
                 echo "   ↳ NIST PQC winner, lattice-based with strong security guarantees"
                 ;;

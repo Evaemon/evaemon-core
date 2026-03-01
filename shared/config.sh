@@ -12,26 +12,24 @@ INSTALL_PREFIX="${BUILD_DIR}"
 
 # Repository information
 LIBOQS_REPO="https://github.com/open-quantum-safe/liboqs.git"
-LIBOQS_BRANCH="main"
-# Supply-chain pinning: always build from a known commit, not just a branch tip.
-# Verify hashes against the upstream release page before updating.
-# liboqs 0.14.0 (May 2025) — fixes CVE-2024-36405, CVE-2025-48946, CVE-2025-52473.
-LIBOQS_COMMIT="e53b7f89caf7adf33d55ec9e2b9e9c8f19e1f4a7"
+# Use the release tag that matches OQS-OpenSSH OQS-v9.
+# liboqs 0.10.1 still has the sphincs_sha2_*_simple naming that OQS-v9 expects.
+# When upgrading OPENSSH_BRANCH, update this tag to the matching liboqs release.
+LIBOQS_BRANCH="0.10.1"
 
 OPENSSH_REPO="https://github.com/open-quantum-safe/openssh.git"
 OPENSSH_BRANCH="OQS-v9"
-# Pin the OQS-OpenSSH commit used for reproducible builds.
-OPENSSH_COMMIT="0f2e26f7ca2e5b46f04b8cf1e45c9e4a8b3c9d12"
 
 # System directories
 OPENSSL_SYS_DIR="/usr"
 SSH_DIR="${HOME}/.ssh"
 
 # Supported algorithms
+# Algorithm names must match the key types built into OQS-OpenSSH OQS-v9 with
+# liboqs 0.10.1. ML-DSA names (mldsa44/66) are only available in liboqs 0.11+;
+# they are intentionally omitted here to avoid key-generation failures.
 ALGORITHMS=(
     "ssh-falcon1024"
-    "ssh-mldsa66"
-    "ssh-mldsa44"
     "ssh-dilithium5"
     "ssh-sphincsharaka192frobust"
     "ssh-sphincssha256128frobust"
