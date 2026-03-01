@@ -37,9 +37,16 @@ copy_client_key() {
 
     # Stream the public key file directly over SSH without loading it into a
     # shell variable (avoids exposure via /proc/<pid>/environ or 'ps' output).
+    #
+    # Bootstrap note: this is the first connection to the server, so we cannot
+    # assume the server already presents a PQ host key.  Use a combined KEX list
+    # (PQ preferred, classical as fallback) and leave HostKeyAlgorithms
+    # unrestricted so the connection succeeds whether the server is running OQS
+    # or standard OpenSSH.  PubkeyAcceptedKeyTypes is still set so we try the
+    # PQ key first; SSH falls back to password auth if the key is not yet in
+    # authorized_keys.
     "${BIN_DIR}/ssh" -i "${private_key_file}" \
-                     -o "KexAlgorithms=${PQ_KEX_LIST}" \
-                     -o "HostKeyAlgorithms=${algorithm}" \
+                     -o "KexAlgorithms=${PQ_KEX_LIST},${CLASSICAL_KEX_ALGORITHMS}" \
                      -o "PubkeyAcceptedKeyTypes=${algorithm}" \
                      -p "${server_port}" \
                      "${server_user}@${server_host}" \
