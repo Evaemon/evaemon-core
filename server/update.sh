@@ -15,26 +15,9 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-# ── Server-local constants ────────────────────────────────────────────────────
-KEY_DIR="${BUILD_DIR}/etc/keys"
-CONFIG_DIR="${BUILD_DIR}/etc"
-CONFIG_FILE="${CONFIG_DIR}/sshd_config"
-PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
-SERVICE_NAME="evaemon-sshd"
 BUILD_SCRIPT="${PROJECT_ROOT}/build_oqs_openssh.sh"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-_sshd_pid() {
-    if [[ -f "$PID_FILE" ]]; then
-        local pid
-        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            echo "$pid"; return
-        fi
-    fi
-    pgrep -f "${SBIN_DIR}/sshd" 2>/dev/null | head -1 || true
-}
 
 _service_is_running() {
     if command -v systemctl &>/dev/null; then
@@ -197,4 +180,6 @@ main() {
     log_info "Verify clients can still connect before closing this session."
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

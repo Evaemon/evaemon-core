@@ -6,11 +6,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-# Override SSH_DIR for the actual user when script is run with sudo
+# Determine the real (non-root) user when script is run with sudo
 if [ -n "$SUDO_USER" ]; then
     REAL_USER="${SUDO_USER}"
     REAL_USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
     SSH_DIR="${REAL_USER_HOME}/.ssh"
+else
+    REAL_USER="$(whoami)"
 fi
 
 # Function for key generation

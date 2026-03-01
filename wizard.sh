@@ -153,29 +153,29 @@ handle_server_menu() {
     while true; do
         print_header
         show_server_menu
-        read -p "Enter your choice: " choice
+        read -rp "Enter your choice: " choice
         echo
 
         case $choice in
             1)
                 handle_build
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             2)
                 handle_server
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             3)
                 handle_monitoring
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             4)
                 handle_update
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             5)
                 handle_diagnostics
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             6)
                 return
@@ -186,7 +186,7 @@ handle_server_menu() {
                 ;;
             *)
                 echo "Invalid choice. Please try again."
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
         esac
     done
@@ -196,45 +196,45 @@ handle_client_menu() {
     while true; do
         print_header
         show_client_menu
-        read -p "Enter your choice: " choice
+        read -rp "Enter your choice: " choice
         echo
 
         case $choice in
             1)
                 handle_build
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             2)
                 handle_keygen
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             3)
                 handle_copy_key
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             4)
                 handle_connect
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             5)
                 handle_backup
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             6)
                 handle_health_check
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             7)
                 handle_key_rotation
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             8)
                 handle_debug
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             9)
                 handle_performance_test
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
             10)
                 return
@@ -245,7 +245,7 @@ handle_client_menu() {
                 ;;
             *)
                 echo "Invalid choice. Please try again."
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
         esac
     done
@@ -258,7 +258,7 @@ main() {
     while true; do
         print_header
         show_mode_selection
-        read -p "Enter your choice (1-3): " mode_choice
+        read -rp "Enter your choice (1-3): " mode_choice
         echo
 
         case $mode_choice in
@@ -274,7 +274,7 @@ main() {
                 ;;
             *)
                 echo "Invalid choice. Please try again."
-                read -p "Press Enter to continue..."
+                read -rp "Press Enter to continue..."
                 ;;
         esac
     done

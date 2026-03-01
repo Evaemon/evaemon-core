@@ -11,11 +11,14 @@
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-# Log level constants (lower number = more verbose)
-readonly LOG_LEVEL_DEBUG=0
-readonly LOG_LEVEL_INFO=1
-readonly LOG_LEVEL_WARN=2
-readonly LOG_LEVEL_ERROR=3
+# Log level constants (lower number = more verbose).
+# Guard against re-sourcing: readonly fails if the variable already exists.
+if ! [[ -v LOG_LEVEL_DEBUG ]]; then
+    readonly LOG_LEVEL_DEBUG=0
+    readonly LOG_LEVEL_INFO=1
+    readonly LOG_LEVEL_WARN=2
+    readonly LOG_LEVEL_ERROR=3
+fi
 
 # Active log level — override before sourcing or export from environment.
 # Defaults to INFO.

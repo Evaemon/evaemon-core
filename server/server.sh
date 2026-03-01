@@ -19,13 +19,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-# ── Server-local constants ────────────────────────────────────────────────────
-KEY_DIR="${BUILD_DIR}/etc/keys"
-CONFIG_DIR="${BUILD_DIR}/etc"
-CONFIG_FILE="${CONFIG_DIR}/sshd_config"
-PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
-SERVICE_NAME="evaemon-sshd"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 INSTALL_DIR="${BUILD_DIR}"
 
 # ── Directory setup ───────────────────────────────────────────────────────────

@@ -63,6 +63,7 @@ bench_handshake() {
     fi
 
     elapsed_ms "${BIN_DIR}/ssh" \
+        -o "KexAlgorithms=${PQ_KEX_LIST}" \
         -o "HostKeyAlgorithms=${algo}" \
         -o "PubkeyAcceptedKeyTypes=${algo}" \
         -o "ConnectTimeout=15" \
@@ -181,4 +182,6 @@ main() {
     log_info "Results saved to: ${PERF_LOG}"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

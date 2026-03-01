@@ -16,14 +16,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../shared/config.sh"
 source "${SCRIPT_DIR}/../../shared/functions.sh"
 
-# ── Server-local constants ────────────────────────────────────────────────────
-KEY_DIR="${BUILD_DIR}/etc/keys"
-CONFIG_DIR="${BUILD_DIR}/etc"
-CONFIG_FILE="${CONFIG_DIR}/sshd_config"
-PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
-SERVICE_NAME="evaemon-sshd"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-
 # ── Sections ──────────────────────────────────────────────────────────────────
 
 diag_binary() {
@@ -146,12 +138,8 @@ diag_service_file() {
 diag_port_conflicts() {
     log_section "Port Conflict Check"
 
-    local port="22"
-    if [[ -f "$CONFIG_FILE" ]]; then
-        local cfg_port
-        cfg_port="$(grep -i "^Port " "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | head -1)"
-        [[ -n "$cfg_port" ]] && port="$cfg_port"
-    fi
+    local port
+    port="$(_configured_port)"
     log_info "  Checking port ${port}..."
 
     local listeners=""
@@ -211,4 +199,6 @@ main() {
     log_section "Diagnostics Complete"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

@@ -65,8 +65,14 @@ _validate_host "$SERVER_HOST"
 _validate_port "$SERVER_PORT"
 _validate_user "$SERVER_USER"
 
+# PQ KEX algorithms for quantum-safe session key exchange
+KEX_ALGOS="ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org"
+KEX_ALGOS="${KEX_ALGOS},ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org"
+KEX_ALGOS="${KEX_ALGOS},x25519-kyber-512r3-sha256-d00@openquantumsafe.org"
+
 _ssh() {
     "${SSH_BIN}" \
+        -o "KexAlgorithms=${KEX_ALGOS}" \
         -o "HostKeyAlgorithms=${ALGORITHM}" \
         -o "PubkeyAcceptedKeyTypes=${ALGORITHM}" \
         -o "ConnectTimeout=15" \

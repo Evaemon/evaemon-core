@@ -58,8 +58,21 @@ KEX_ALGORITHMS=(
     "kyber-512r3-sha256-d00@openquantumsafe.org"
 )
 
+# Pre-computed comma-separated PQ KEX list for SSH client -o KexAlgorithms=...
+# Every SSH invocation in the toolkit should include this to ensure the session
+# key exchange is quantum-safe, not just the authentication.
+PQ_KEX_LIST="$(IFS=','; echo "${KEX_ALGORITHMS[*]}")"
+
 # Classical key exchange algorithms appended in hybrid server deployments so
 # standard (non-OQS) SSH clients can still connect alongside PQ clients.
 # Note: diffie-hellman-group14-sha256 (2048-bit DH) is intentionally excluded
 # — it is deprecated per NIST SP 800-77r1; group16 (4096-bit) is the minimum.
 CLASSICAL_KEX_ALGORITHMS="curve25519-sha256,ecdh-sha2-nistp384,diffie-hellman-group16-sha512"
+
+# Server paths — shared across server setup, monitoring, update, and diagnostics
+KEY_DIR="${BUILD_DIR}/etc/keys"
+CONFIG_DIR="${BUILD_DIR}/etc"
+CONFIG_FILE="${CONFIG_DIR}/sshd_config"
+PID_FILE="${BUILD_DIR}/var/run/sshd.pid"
+SERVICE_NAME="evaemon-sshd"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"

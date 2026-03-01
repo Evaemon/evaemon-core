@@ -20,6 +20,7 @@ _ssh() {
     local key="$1"; shift
     local algo="$1"; shift
     "${BIN_DIR}/ssh" \
+        -o "KexAlgorithms=${PQ_KEX_LIST}" \
         -o "HostKeyAlgorithms=${algo}" \
         -o "PubkeyAcceptedKeyTypes=${algo}" \
         -o "ConnectTimeout=15" \
