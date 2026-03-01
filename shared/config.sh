@@ -12,7 +12,10 @@ INSTALL_PREFIX="${BUILD_DIR}"
 
 # Repository information
 LIBOQS_REPO="https://github.com/open-quantum-safe/liboqs.git"
-LIBOQS_BRANCH="main"
+# Use the release tag that matches OQS-OpenSSH OQS-v9.
+# liboqs 0.10.1 still has the sphincs_sha2_*_simple naming that OQS-v9 expects.
+# When upgrading OPENSSH_BRANCH, update this tag to the matching liboqs release.
+LIBOQS_BRANCH="0.10.1"
 
 OPENSSH_REPO="https://github.com/open-quantum-safe/openssh.git"
 OPENSSH_BRANCH="OQS-v9"
