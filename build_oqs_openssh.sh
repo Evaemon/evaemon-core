@@ -78,7 +78,32 @@ main() {
     else
         OPENSSL_DETECTED_ROOT="${OPENSSL_SYS_DIR}"
     fi
-    log_info "Using OpenSSL root: ${OPENSSL_DETECTED_ROOT}"
+
+    # Locate the actual libcrypto shared library file. cmake's FindOpenSSL module
+    # does not search multiarch dirs (e.g. /usr/lib/x86_64-linux-gnu) when only
+    # OPENSSL_ROOT_DIR=/usr is given, so we resolve the path explicitly.
+    OPENSSL_CRYPTO_LIB=""
+    # 1. Ask the runtime linker cache first — most reliable
+    OPENSSL_CRYPTO_LIB="$(ldconfig -p 2>/dev/null | awk '/libcrypto\.so[^.0-9]/{print $NF; exit}')"
+    # 2. Fall back to common prefixes/multiarch paths
+    if [ -z "${OPENSSL_CRYPTO_LIB}" ]; then
+        for _d in \
+            "${OPENSSL_DETECTED_ROOT}/lib" \
+            "${OPENSSL_DETECTED_ROOT}/lib64" \
+            /usr/lib/x86_64-linux-gnu \
+            /usr/lib/aarch64-linux-gnu \
+            /usr/lib64 \
+            /usr/local/lib \
+            /usr/local/lib64; do
+            if [ -f "${_d}/libcrypto.so" ]; then
+                OPENSSL_CRYPTO_LIB="${_d}/libcrypto.so"
+                break
+            fi
+        done
+    fi
+
+    log_info "Using OpenSSL root:    ${OPENSSL_DETECTED_ROOT}"
+    log_info "Using libcrypto:       ${OPENSSL_CRYPTO_LIB:-<not found, relying on root>}"
     # Override the config-file default so the openssh ./configure step uses the same root
     OPENSSL_SYS_DIR="${OPENSSL_DETECTED_ROOT}"
 
@@ -89,7 +114,8 @@ main() {
     mkdir build && cd build
     cmake .. -GNinja -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
-        -DOPENSSL_ROOT_DIR="${OPENSSL_DETECTED_ROOT}"
+        -DOPENSSL_ROOT_DIR="${OPENSSL_DETECTED_ROOT}" \
+        ${OPENSSL_CRYPTO_LIB:+-DOPENSSL_CRYPTO_LIBRARY="${OPENSSL_CRYPTO_LIB}"}
     ninja
     ninja install
     cd "${PROJECT_ROOT}"
