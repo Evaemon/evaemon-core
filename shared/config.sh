@@ -25,10 +25,11 @@ OPENSSL_SYS_DIR="/usr"
 SSH_DIR="${HOME}/.ssh"
 
 # Supported algorithms
+# Algorithm names must match the key types built into OQS-OpenSSH OQS-v9 with
+# liboqs 0.10.1. ML-DSA names (mldsa44/66) are only available in liboqs 0.11+;
+# they are intentionally omitted here to avoid key-generation failures.
 ALGORITHMS=(
     "ssh-falcon1024"
-    "ssh-mldsa66"
-    "ssh-mldsa44"
     "ssh-dilithium5"
     "ssh-sphincsharaka192frobust"
     "ssh-sphincssha256128frobust"

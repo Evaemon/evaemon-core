@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eo pipefail
 
+# Resolve the project root from the wizard's own location so the script works
+# regardless of the current working directory (M3 fix).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Check if script is run as root
 if [ "$EUID" -ne 0 ]; then
     echo "This wizard must be run as root (sudo)."
@@ -10,19 +14,19 @@ fi
 # Ensure scripts have execution permissions
 ensure_permissions() {
     local scripts=(
-        "build_oqs_openssh.sh"
-        "server/server.sh"
-        "server/monitoring.sh"
-        "server/update.sh"
-        "server/tools/diagnostics.sh"
-        "client/keygen.sh"
-        "client/copy_key_to_server.sh"
-        "client/connect.sh"
-        "client/backup.sh"
-        "client/health_check.sh"
-        "client/key_rotation.sh"
-        "client/tools/debug.sh"
-        "client/tools/performance_test.sh"
+        "${SCRIPT_DIR}/build_oqs_openssh.sh"
+        "${SCRIPT_DIR}/server/server.sh"
+        "${SCRIPT_DIR}/server/monitoring.sh"
+        "${SCRIPT_DIR}/server/update.sh"
+        "${SCRIPT_DIR}/server/tools/diagnostics.sh"
+        "${SCRIPT_DIR}/client/keygen.sh"
+        "${SCRIPT_DIR}/client/copy_key_to_server.sh"
+        "${SCRIPT_DIR}/client/connect.sh"
+        "${SCRIPT_DIR}/client/backup.sh"
+        "${SCRIPT_DIR}/client/health_check.sh"
+        "${SCRIPT_DIR}/client/key_rotation.sh"
+        "${SCRIPT_DIR}/client/tools/debug.sh"
+        "${SCRIPT_DIR}/client/tools/performance_test.sh"
     )
 
     for script in "${scripts[@]}"; do
@@ -81,7 +85,7 @@ show_client_menu() {
 
 handle_build() {
     echo "Starting OQS-OpenSSH build process..."
-    if bash build_oqs_openssh.sh; then
+    if bash "${SCRIPT_DIR}/build_oqs_openssh.sh"; then
         echo "Build completed successfully!"
     else
         echo "Build process failed. Please check the logs."
@@ -91,62 +95,62 @@ handle_build() {
 
 handle_server() {
     echo "Starting server configuration..."
-    bash server/server.sh
+    bash "${SCRIPT_DIR}/server/server.sh"
 }
 
 handle_monitoring() {
     echo "Starting sshd monitor..."
-    bash server/monitoring.sh
+    bash "${SCRIPT_DIR}/server/monitoring.sh"
 }
 
 handle_update() {
     echo "Starting update process..."
-    bash server/update.sh
+    bash "${SCRIPT_DIR}/server/update.sh"
 }
 
 handle_diagnostics() {
     echo "Starting diagnostics..."
-    bash server/tools/diagnostics.sh
+    bash "${SCRIPT_DIR}/server/tools/diagnostics.sh"
 }
 
 handle_keygen() {
     echo "Starting key generation..."
-    bash client/keygen.sh
+    bash "${SCRIPT_DIR}/client/keygen.sh"
 }
 
 handle_copy_key() {
     echo "Starting key copy process..."
-    bash client/copy_key_to_server.sh
+    bash "${SCRIPT_DIR}/client/copy_key_to_server.sh"
 }
 
 handle_connect() {
     echo "Starting SSH connection..."
-    bash client/connect.sh
+    bash "${SCRIPT_DIR}/client/connect.sh"
 }
 
 handle_backup() {
     echo "Starting backup/restore tool..."
-    bash client/backup.sh
+    bash "${SCRIPT_DIR}/client/backup.sh"
 }
 
 handle_health_check() {
     echo "Starting health check..."
-    bash client/health_check.sh
+    bash "${SCRIPT_DIR}/client/health_check.sh"
 }
 
 handle_key_rotation() {
     echo "Starting key rotation..."
-    bash client/key_rotation.sh
+    bash "${SCRIPT_DIR}/client/key_rotation.sh"
 }
 
 handle_debug() {
     echo "Starting debug tool..."
-    bash client/tools/debug.sh
+    bash "${SCRIPT_DIR}/client/tools/debug.sh"
 }
 
 handle_performance_test() {
     echo "Starting performance benchmark..."
-    bash client/tools/performance_test.sh
+    bash "${SCRIPT_DIR}/client/tools/performance_test.sh"
 }
 
 handle_server_menu() {

@@ -64,12 +64,14 @@ _keytype_to_ssh_algo() {
     esac
 }
 
-# create_sshd_config KEYTYPE [KEYTYPE...]
+# create_sshd_config PORT KEYTYPE [KEYTYPE...]
 # Write sshd_config with one HostKey line per key type and a comma-separated
 # HostKeyAlgorithms / PubkeyAcceptedKeyTypes directive covering all of them.
 # Classical types (ed25519, rsa) are mapped to their SSH algorithm names;
 # PQ types (ssh-falcon1024, etc.) are used directly.
 create_sshd_config() {
+    local port="$1"
+    shift
     local keytypes=("$@")
     local algo_parts=()
     for kt in "${keytypes[@]}"; do
@@ -96,12 +98,16 @@ create_sshd_config() {
     fi
 
     {
-        echo "Port 22"
+        echo "Port ${port}"
         for kt in "${keytypes[@]}"; do
             echo "HostKey ${KEY_DIR}/ssh_host_${kt}_key"
         done
         echo "HostKeyAlgorithms ${algo_list}"
         echo "PubkeyAcceptedKeyTypes ${algo_list}"
+        echo "PubkeyAuthentication yes"
+        echo "PasswordAuthentication no"
+        echo "ChallengeResponseAuthentication no"
+        echo "AuthenticationMethods publickey"
         echo "KexAlgorithms ${kex_list}"
         echo "AuthorizedKeysFile .ssh/authorized_keys"
         echo "PermitRootLogin no"
@@ -141,7 +147,19 @@ EOF
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 main() {
+    # Fail fast if the build hasn't been run yet (L3 fix)
+    if [[ ! -x "${BIN_DIR}/ssh-keygen" ]]; then
+        log_fatal "OQS-OpenSSH not found at ${BIN_DIR}/ssh-keygen. Please run the build first (option 1 in the wizard)."
+    fi
+
     setup_directories
+
+    # Prompt for port — default 2222 to avoid conflicting with system sshd on 22 (M1 fix)
+    local port
+    read -rp "SSH listen port [2222]: " port
+    port="${port:-2222}"
+    validate_port "$port" || log_fatal "Invalid port number: ${port}"
+    log_info "Using port ${port}"
 
     log_section "Algorithm Selection"
     echo "1. All supported PQ algorithms (recommended — broadest PQ client compatibility)"
@@ -196,7 +214,7 @@ main() {
     for kt in "${selected_keytypes[@]}"; do
         generate_host_key "$kt"
     done
-    create_sshd_config "${selected_keytypes[@]}"
+    create_sshd_config "$port" "${selected_keytypes[@]}"
     create_systemd_service
 
     log_section "Installation Complete"
