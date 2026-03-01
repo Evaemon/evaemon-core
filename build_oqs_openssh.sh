@@ -36,19 +36,22 @@ install_dependencies() {
     fi
 
     if [ -f /etc/debian_version ]; then
-        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib1g-dev git doxygen graphviz"
+        # openssh-client provides the system ssh(1) used by copy_key_to_server.sh
+        # for the bootstrap key-copy step (before OQS-OpenSSH is built).
+        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib1g-dev git doxygen graphviz openssh-client"
         [[ "$need_ssl_dev" == true ]] && pkgs="${pkgs} libssl-dev"
         sudo apt-get update
         # shellcheck disable=SC2086
         sudo apt-get install -y ${pkgs}
     elif [ -f /etc/redhat-release ]; then
-        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib-devel git doxygen graphviz pkg-config"
+        # openssh-clients provides the system ssh(1) on RPM-based distributions.
+        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib-devel git doxygen graphviz pkg-config openssh-clients"
         [[ "$need_ssl_dev" == true ]] && pkgs="${pkgs} openssl-devel"
         # shellcheck disable=SC2086
         sudo dnf install -y ${pkgs}
     else
         log_warn "Unsupported distribution. Please install dependencies manually."
-        log_warn "Required: autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git"
+        log_warn "Required: autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git openssh-client"
     fi
 
     # Ensure the sshd privilege-separation user and directory exist
