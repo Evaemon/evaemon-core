@@ -15,13 +15,13 @@ LIBOQS_REPO="https://github.com/open-quantum-safe/liboqs.git"
 LIBOQS_BRANCH="main"
 # Supply-chain pinning: always build from a known commit, not just a branch tip.
 # Verify hashes against the upstream release page before updating.
-# liboqs 0.14.0 (May 2025) — fixes CVE-2024-36405, CVE-2025-48946, CVE-2025-52473.
-LIBOQS_COMMIT="e53b7f89caf7adf33d55ec9e2b9e9c8f19e1f4a7"
+# liboqs 0.14.0 tag commit (verified via git ls-remote).
+LIBOQS_COMMIT="94b421ebb82405c843dba4e9aa521a56ee5a333d"
 
 OPENSSH_REPO="https://github.com/open-quantum-safe/openssh.git"
 OPENSSH_BRANCH="OQS-v9"
 # Pin the OQS-OpenSSH commit used for reproducible builds.
-OPENSSH_COMMIT="0f2e26f7ca2e5b46f04b8cf1e45c9e4a8b3c9d12"
+OPENSSH_COMMIT="94fa556ec6cf1b5919bb00b53f1e9b4c10a2ba69"
 
 # System directories
 OPENSSL_SYS_DIR="/usr"
