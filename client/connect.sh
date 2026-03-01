@@ -35,13 +35,11 @@ connect() {
     key_path="${SSH_DIR}/id_${algorithm}"
     validate_file_exists "$key_path" || log_fatal "Key file not found: ${key_path}. Generate a key first."
 
-    pq_kex_list="$(IFS=','; echo "${KEX_ALGORITHMS[*]}")"
-
     case "$conn_mode" in
         1)
             log_info "Connecting to ${username}@${server_host} using ${algorithm}..."
             SSH_AUTH_SOCK="" "${BIN_DIR}/ssh" \
-                -o "KexAlgorithms=${pq_kex_list}" \
+                -o "KexAlgorithms=${PQ_KEX_LIST}" \
                 -o "HostKeyAlgorithms=${algorithm}" \
                 -o "PubkeyAcceptedKeyTypes=${algorithm}" \
                 -i "${key_path}" \
@@ -53,7 +51,7 @@ connect() {
             # PQ and classical algorithms so the client interoperates with hybrid
             # servers.  User authentication still uses the PQ key.
             hybrid_algos="${algorithm},${CLASSICAL_HOST_ALGOS}"
-            hybrid_kex="${pq_kex_list},${CLASSICAL_KEX_ALGORITHMS}"
+            hybrid_kex="${PQ_KEX_LIST},${CLASSICAL_KEX_ALGORITHMS}"
             log_info "Connecting to ${username}@${server_host} using hybrid mode (${algorithm} + classical)..."
             SSH_AUTH_SOCK="" "${BIN_DIR}/ssh" \
                 -o "KexAlgorithms=${hybrid_kex}" \

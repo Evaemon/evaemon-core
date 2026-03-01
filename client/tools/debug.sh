@@ -108,6 +108,7 @@ verbose_connect() {
     # || true prevents pipefail from aborting on auth failure.
     "${BIN_DIR}/ssh" \
         -vvv \
+        -o "KexAlgorithms=${PQ_KEX_LIST}" \
         -o "HostKeyAlgorithms=${algo}" \
         -o "PubkeyAcceptedKeyTypes=${algo}" \
         -o "ConnectTimeout=15" \
@@ -144,6 +145,7 @@ inspect_remote_env() {
 
     local remote_info
     remote_info=$( "${BIN_DIR}/ssh" \
+        -o "KexAlgorithms=${PQ_KEX_LIST}" \
         -o "HostKeyAlgorithms=${algo}" \
         -o "PubkeyAcceptedKeyTypes=${algo}" \
         -o "ConnectTimeout=15" \

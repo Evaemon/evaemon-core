@@ -109,6 +109,7 @@ check_handshake() {
     while (( attempt <= 3 )); do
         local output
         if output=$( "${BIN_DIR}/ssh" \
+                -o "KexAlgorithms=${PQ_KEX_LIST}" \
                 -o "HostKeyAlgorithms=${algorithm}" \
                 -o "PubkeyAcceptedKeyTypes=${algorithm}" \
                 -o "ConnectTimeout=10" \

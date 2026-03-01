@@ -38,8 +38,9 @@ copy_client_key() {
     # Stream the public key file directly over SSH without loading it into a
     # shell variable (avoids exposure via /proc/<pid>/environ or 'ps' output).
     "${BIN_DIR}/ssh" -i "${private_key_file}" \
-                     -o HostKeyAlgorithms="${algorithm}" \
-                     -o PubkeyAcceptedKeyTypes="${algorithm}" \
+                     -o "KexAlgorithms=${PQ_KEX_LIST}" \
+                     -o "HostKeyAlgorithms=${algorithm}" \
+                     -o "PubkeyAcceptedKeyTypes=${algorithm}" \
                      -p "${server_port}" \
                      "${server_user}@${server_host}" \
                      'mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
