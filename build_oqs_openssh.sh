@@ -68,12 +68,28 @@ main() {
     rm -rf "${BUILD_DIR}/tmp" && mkdir -p "${BUILD_DIR}/tmp"
     git clone --branch "${LIBOQS_BRANCH}" --single-branch --depth 1 "${LIBOQS_REPO}" "${BUILD_DIR}/tmp/liboqs"
 
+    # Detect the OpenSSL installation root so cmake and ./configure both find it,
+    # even when OpenSSL was built from source and installed to /usr/local.
+    if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists libssl 2>/dev/null; then
+        OPENSSL_DETECTED_ROOT="$(pkg-config --variable=prefix libssl)"
+    elif command -v openssl >/dev/null 2>&1; then
+        # Derive root from the binary path  (/usr/local/bin/openssl → /usr/local)
+        OPENSSL_DETECTED_ROOT="$(dirname "$(dirname "$(command -v openssl)")")"
+    else
+        OPENSSL_DETECTED_ROOT="${OPENSSL_SYS_DIR}"
+    fi
+    log_info "Using OpenSSL root: ${OPENSSL_DETECTED_ROOT}"
+    # Override the config-file default so the openssh ./configure step uses the same root
+    OPENSSL_SYS_DIR="${OPENSSL_DETECTED_ROOT}"
+
     # Step 2: Build liboqs
     log_info "Building liboqs..."
     cd "${BUILD_DIR}/tmp/liboqs"
     rm -rf build
     mkdir build && cd build
-    cmake .. -GNinja -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX="${PREFIX}"
+    cmake .. -GNinja -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+        -DOPENSSL_ROOT_DIR="${OPENSSL_DETECTED_ROOT}"
     ninja
     ninja install
     cd "${PROJECT_ROOT}"
