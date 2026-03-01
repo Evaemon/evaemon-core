@@ -63,13 +63,10 @@ main() {
 
     install_dependencies
 
-    # Step 1: Clone liboqs and pin to a verified commit (supply-chain protection).
-    # Update LIBOQS_COMMIT in shared/config.sh after reviewing the release notes.
+    # Step 1: Clone liboqs at the tip of the configured branch.
     log_info "Cloning liboqs..."
     rm -rf "${BUILD_DIR}/tmp" && mkdir -p "${BUILD_DIR}/tmp"
-    git clone --branch "${LIBOQS_BRANCH}" --single-branch "${LIBOQS_REPO}" "${BUILD_DIR}/tmp/liboqs"
-    git -C "${BUILD_DIR}/tmp/liboqs" checkout "${LIBOQS_COMMIT}"
-    log_info "Pinned liboqs to commit ${LIBOQS_COMMIT}"
+    git clone --branch "${LIBOQS_BRANCH}" --single-branch --depth 1 "${LIBOQS_REPO}" "${BUILD_DIR}/tmp/liboqs"
 
     # Step 2: Build liboqs
     log_info "Building liboqs..."
@@ -81,11 +78,9 @@ main() {
     ninja install
     cd "${PROJECT_ROOT}"
 
-    # Step 3: Clone OpenSSH and pin to a verified commit.
+    # Step 3: Clone OpenSSH at the tip of the configured branch.
     log_info "Cloning OpenSSH..."
-    git clone --branch "${OPENSSH_BRANCH}" --single-branch "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
-    git -C "${BUILD_DIR}/openssh" checkout "${OPENSSH_COMMIT}"
-    log_info "Pinned OQS-OpenSSH to commit ${OPENSSH_COMMIT}"
+    git clone --branch "${OPENSSH_BRANCH}" --single-branch --depth 1 "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
 
     # Step 4: Build OpenSSH
     log_info "Building OpenSSH..."
