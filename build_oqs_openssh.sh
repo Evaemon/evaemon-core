@@ -174,7 +174,12 @@ main() {
     # previous failed run don't persist (C4 fix).
     log_info "Cloning OpenSSH..."
     rm -rf "${BUILD_DIR}/openssh"
-    git clone --branch "${OPENSSH_BRANCH}" --single-branch --depth 1 "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
+    # Full clone (no --depth 1): shallow clones of OQS-OpenSSH OQS-v9 intermittently
+    # fail with "fatal: unable to read tree <hash>" during the checkout phase because
+    # the server's shallow pack omits tree objects that git needs to populate the
+    # working directory.  A full clone avoids this without meaningful overhead since
+    # the build already downloads ~180 MiB regardless.
+    git clone --branch "${OPENSSH_BRANCH}" --single-branch "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
 
     # Patch configure.ac to accept OpenSSL 3.5+ (upstream check only tested up to 3.3/3.4).
     # Downgrade the hard error to a warning so the build continues on newer OpenSSL.
