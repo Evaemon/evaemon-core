@@ -65,7 +65,6 @@ retry_with_backoff 5 0 _rb_stop_early 2>/dev/null
 assert_eq "2" "$_rb_stop"
 
 it "emits a warning message on each failed attempt"
-_rb_out
 _rb_out="$(retry_with_backoff 2 0 false 2>&1 || true)"
 assert_contains "failed" "$_rb_out"
 

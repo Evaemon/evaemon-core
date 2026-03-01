@@ -197,4 +197,6 @@ main() {
     log_info "Verify clients can still connect before closing this session."
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

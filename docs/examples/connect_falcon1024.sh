@@ -37,7 +37,13 @@ fi
 # ── Connect ───────────────────────────────────────────────────────────────────
 echo "Connecting to ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT} using ${ALGORITHM} ..."
 
+# PQ KEX algorithms ensure the session key exchange is also quantum-resistant
+KEX_ALGOS="ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org"
+KEX_ALGOS="${KEX_ALGOS},ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org"
+KEX_ALGOS="${KEX_ALGOS},x25519-kyber-512r3-sha256-d00@openquantumsafe.org"
+
 exec "${SSH_BIN}" \
+    -o "KexAlgorithms=${KEX_ALGOS}" \
     -o "HostKeyAlgorithms=${ALGORITHM}" \
     -o "PubkeyAcceptedKeyTypes=${ALGORITHM}" \
     -i "${IDENTITY_FILE}" \

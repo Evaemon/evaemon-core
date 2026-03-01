@@ -181,4 +181,6 @@ main() {
     log_info "Results saved to: ${PERF_LOG}"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
