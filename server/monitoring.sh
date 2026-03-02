@@ -101,6 +101,10 @@ show_pq_algorithm_events() {
 
     local algo_pattern
     algo_pattern="$(IFS='|'; echo "${ALGORITHMS[*]}")"
+    if [[ -z "$algo_pattern" ]]; then
+        log_warn "  No algorithms configured -- skipping PQ event search."
+        return
+    fi
 
     local matches=""
     if command -v journalctl &>/dev/null; then

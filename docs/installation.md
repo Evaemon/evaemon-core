@@ -86,7 +86,17 @@ Expected output (version numbers may vary):
 OpenSSH_9.x OQS-v9.x, liboqs x.x.x
 ```
 
-> **Note:** The build script can also be launched from the wizard (`wizard.sh`), which is the recommended entry point for interactive use.
+> **Recommended:** launch the build from the wizard (`wizard.sh`). The wizard runs the build in the background and shows a live step-by-step progress gauge so you can see exactly which phase is running:
+> ```
+> Step 1/7 — Installing dependencies
+> Step 2/7 — Cloning liboqs
+> Step 3/7 — Building liboqs
+> Step 4/7 — Cloning OpenSSH
+> Step 5/7 — Compiling OpenSSH
+> Step 6/7 — Linking shared libraries
+> Step 7/7 — Finalizing installation
+> ```
+> If the build fails, the wizard offers to open the full build log in a scrollable viewer without leaving the GUI.
 
 ---
 

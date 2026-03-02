@@ -70,6 +70,7 @@ do_backup() {
     pass_file="$(mktemp)"
     chmod 600 "$pass_file"
     printf '%s' "$pass" > "$pass_file"
+    unset pass pass2
     # Ensure temp file is removed on exit/error
     trap 'rm -f "${pass_file}"' RETURN
 
@@ -115,6 +116,7 @@ do_restore() {
     pass_file="$(mktemp)"
     chmod 600 "$pass_file"
     printf '%s' "$pass" > "$pass_file"
+    unset pass
     trap 'rm -f "${pass_file}"' RETURN
 
     if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \

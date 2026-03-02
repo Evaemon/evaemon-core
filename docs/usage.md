@@ -20,6 +20,8 @@ This manual covers every tool in Evaemon: what it does, when to use it, and how 
 sudo bash wizard.sh
 ```
 
+The wizard opens with the EVAEMON ASCII logo splash, then presents a dark cyan-themed whiptail interface. The main menu shows the current OQS build status (`INSTALLED` or `NOT BUILT`) and the Build menu item carries a dynamic label so you always know whether to run the build step first. The build itself runs in the background with a live step-aware progress gauge; if it fails, the full log can be viewed inline.
+
 ### Mode selection
 | Input | Mode |
 |-------|------|
@@ -30,18 +32,18 @@ sudo bash wizard.sh
 ### Server menu
 | Input | Action |
 |-------|--------|
-| `1`   | Build and install OQS-OpenSSH |
-| `2`   | Configure server |
+| `1`   | Build / Rebuild OQS-OpenSSH `[INSTALLED]` or `[NOT BUILT - START HERE]` |
+| `2`   | Configure sshd |
 | `3`   | Monitor sshd |
 | `4`   | Update / Rebuild |
 | `5`   | Diagnostics |
-| `6`   | Back |
+| `6`   | Back to Main Menu |
 | `7`   | Exit |
 
 ### Client menu
 | Input | Action |
 |-------|--------|
-| `1`   | Build and install OQS-OpenSSH |
+| `1`   | Build / Rebuild OQS-OpenSSH `[INSTALLED]` or `[NOT BUILT - START HERE]` |
 | `2`   | Generate key pair |
 | `3`   | Copy public key to server |
 | `4`   | Connect to server |
@@ -50,7 +52,7 @@ sudo bash wizard.sh
 | `7`   | Rotate keys |
 | `8`   | Debug tools |
 | `9`   | Performance benchmark |
-| `10`  | Back |
+| `10`  | Back to Main Menu |
 | `11`  | Exit |
 
 ---

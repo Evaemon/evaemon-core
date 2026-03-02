@@ -208,6 +208,8 @@ build/bin/ssh-keygen -R old-server.example.com
 
 Backup files produced by `client/backup.sh` are encrypted with AES-256-CBC (PBKDF2, 600,000 iterations). They are as sensitive as the private keys they contain.
 
+The passphrase is written to a `chmod 600` temp file immediately, then the in-memory variable is cleared with `unset` before the encryption command runs. The temp file is removed unconditionally via a `RETURN` trap. This minimises the window during which the passphrase is recoverable from process memory or `/proc/<pid>/cmdline`.
+
 - Store backups in an **offline** location (encrypted USB, offline cold storage).
 - Never store a backup and its passphrase together.
 - Test restoration periodically.

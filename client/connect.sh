@@ -11,7 +11,7 @@ connect() {
     echo "Post-Quantum SSH Connection Tool"
     echo "--------------------------------"
 
-    read -rp "Enter the server IP address: " server_host
+    read -rp "Enter the server host/IP: " server_host
     validate_ip "$server_host" || exit 1
 
     read -rp "Enter the username: " username
@@ -21,13 +21,15 @@ connect() {
     port=${port:-22}
     validate_port "$port" || exit 1
 
-    echo -e "\nSelect connection mode:"
+    echo
+    echo "Select connection mode:"
     echo "1. Post-quantum only"
     echo "2. Hybrid (post-quantum + classical)"
     read -rp "Mode (1-2) [1]: " conn_mode
     conn_mode="${conn_mode:-1}"
 
-    echo -e "\nSelect the post-quantum algorithm:"
+    echo
+    echo "Select the post-quantum algorithm:"
     list_algorithms
     read -rp "Enter algorithm number: " choice
     validate_algorithm_choice "$choice" "${#ALGORITHMS[@]}" || exit 1

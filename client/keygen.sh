@@ -23,7 +23,7 @@ generate_key() {
     if [[ ! -d "${SSH_DIR}" ]]; then
         mkdir -p "${SSH_DIR}"
         chmod 700 "${SSH_DIR}"
-        chown "${REAL_USER}:${REAL_USER}" "${SSH_DIR}"
+        chown "${REAL_USER}:${REAL_USER}" "${SSH_DIR}" 2>/dev/null || true
     fi
     
     log_info "Generating ${key_type} key..."
