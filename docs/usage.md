@@ -34,11 +34,12 @@ The wizard opens with the EVAEMON ASCII logo splash, then presents a dark cyan-t
 |-------|--------|
 | `1`   | Build / Rebuild OQS-OpenSSH `[INSTALLED]` or `[NOT BUILT - START HERE]` |
 | `2`   | Configure sshd |
-| `3`   | Monitor sshd |
+| `3`   | Monitor sshd (includes quantum readiness report) |
 | `4`   | Update / Rebuild |
-| `5`   | Diagnostics |
-| `6`   | Back to Main Menu |
-| `7`   | Exit |
+| `5`   | PQ-Only Test Mode (experimental) |
+| `6`   | Diagnostics |
+| `7`   | Back to Main Menu |
+| `8`   | Exit |
 
 ### Client menu
 | Input | Action |
@@ -46,14 +47,15 @@ The wizard opens with the EVAEMON ASCII logo splash, then presents a dark cyan-t
 | `1`   | Build / Rebuild OQS-OpenSSH `[INSTALLED]` or `[NOT BUILT - START HERE]` |
 | `2`   | Generate key pair |
 | `3`   | Copy public key to server |
-| `4`   | Connect to server |
+| `4`   | Connect to server (warns if classical keys detected) |
 | `5`   | Backup / Restore keys |
 | `6`   | Health check |
-| `7`   | Rotate keys |
-| `8`   | Debug tools |
-| `9`   | Performance benchmark |
-| `10`  | Back to Main Menu |
-| `11`  | Exit |
+| `7`   | Rotate keys (90-day enforcement + old-key invalidation) |
+| `8`   | Migrate Classical Keys to PQ |
+| `9`   | Debug tools |
+| `10`  | Performance benchmark |
+| `11`  | Back to Main Menu |
+| `12`  | Exit |
 
 ---
 
@@ -93,6 +95,8 @@ bash client/copy_key_to_server.sh
 
 Opens an interactive SSH session using the OQS ssh binary. Supports PQ-only and hybrid connection modes.
 
+**Aggressive migration warning:** Before connecting, the tool probes the server's `authorized_keys` for classical (non-PQ) key types. If any are found (ssh-rsa, ecdsa, ssh-ed25519), a warning is displayed recommending migration via `client/migrate_keys.sh`. This check is best-effort and never blocks the connection.
+
 ```bash
 bash client/connect.sh
 ```
@@ -109,7 +113,7 @@ bash client/connect.sh
 PQ-only connection:
 ```bash
 build/bin/ssh \
-  -o "KexAlgorithms=ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org,..." \
+  -o "KexAlgorithms=mlkem1024nistp384-sha384,mlkem768x25519-sha256,..." \
   -o "HostKeyAlgorithms=ssh-falcon1024" \
   -o "PubkeyAcceptedKeyTypes=ssh-falcon1024" \
   -i ~/.ssh/id_ssh-falcon1024 \
@@ -119,7 +123,7 @@ build/bin/ssh \
 Hybrid connection:
 ```bash
 build/bin/ssh \
-  -o "KexAlgorithms=ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org,...,curve25519-sha256,..." \
+  -o "KexAlgorithms=mlkem1024nistp384-sha384,...,curve25519-sha256,..." \
   -o "HostKeyAlgorithms=ssh-falcon1024,ssh-ed25519,rsa-sha2-512,rsa-sha2-256" \
   -o "PubkeyAcceptedKeyTypes=ssh-falcon1024,ssh-ed25519,rsa-sha2-512,rsa-sha2-256" \
   -i ~/.ssh/id_ssh-falcon1024 \
@@ -175,9 +179,31 @@ Rotates a post-quantum SSH key pair safely:
 bash client/key_rotation.sh
 ```
 
-Steps: generate new key → push to server → verify auth (4 attempts, 2 → 4 → 8 → 16 s backoff) → optionally remove old key → archive old key locally.
+Steps: generate new key → push to server → verify auth (4 attempts, 2 → 4 → 8 → 16 s backoff) → optionally remove old key → verify old key rejected → archive old key locally.
+
+**90-day enforcement:** keys older than 90 days (configurable via `KEY_MAX_AGE_DAYS`) trigger automatic rotation. Keys within the policy window prompt for confirmation.
+
+**Old-key invalidation:** after removing the old key from `authorized_keys`, the tool verifies the old key is actually rejected by the server. This confirms the rotation is truly complete.
 
 **Safety guarantee:** the old key is never removed from the server until the new key has been verified to authenticate successfully. The old key is renamed to `id_<algo>.retired_<timestamp>` with 400 permissions.
+
+---
+
+### Key migration (`client/migrate_keys.sh`)
+
+Scans a server's `~/.ssh/authorized_keys` for classical (non-PQ) SSH key types and offers to migrate them.
+
+```bash
+# Interactive — scan a remote server
+bash client/migrate_keys.sh
+
+# Local only — scan local authorized_keys
+bash client/migrate_keys.sh --local
+```
+
+Classical key types detected: `ssh-rsa`, `ssh-dss`, `ecdsa-sha2-*`, `ssh-ed25519`.
+
+The tool fetches the remote `authorized_keys`, reports each key as classical or PQ, and offers to remove all classical keys (with a server-side backup in `~/.ssh/authorized_keys.pre_migration`). After migration, it verifies the PQ key still authenticates.
 
 ---
 
@@ -235,7 +261,7 @@ sudo bash server/server.sh
 | `3`  | Hybrid — all PQ algorithms + Ed25519 and RSA; classical clients can connect too |
 | `4`  | Hybrid — select specific PQ algorithms + Ed25519 and RSA |
 
-In hybrid modes (3 and 4), the generated `KexAlgorithms` directive includes both PQ/hybrid Kyber-based KEX (preferred) and classical KEX (fallback for standard clients).
+In hybrid modes (3 and 4), the generated `KexAlgorithms` directive includes both PQ/hybrid ML-KEM-based KEX (preferred) and classical KEX (fallback for standard clients).
 
 Manage the service:
 ```bash
@@ -246,7 +272,7 @@ sudo systemctl {start|stop|restart|status} evaemon-sshd.service
 
 ### Monitor (`server/monitoring.sh`)
 
-Shows real-time and recent activity of the post-quantum sshd.
+Shows real-time and recent activity of the post-quantum sshd, including a **quantum readiness report**.
 
 ```bash
 sudo bash server/monitoring.sh
@@ -254,7 +280,28 @@ sudo bash server/monitoring.sh
 
 Modes: one-shot snapshot or continuous watch (default 10 s interval, Ctrl-C to stop).
 
-Information shown: service status, active connections, recent auth events, PQ algorithm negotiation events, system load, sshd process uptime.
+Information shown:
+- Service status
+- **Quantum readiness report** — analyses `sshd_config` and computes a 0-100% score:
+  - Current negotiated algo (e.g. "Falcon-1024 + mlkem1024nistp384-sha384")
+  - Multi-family coverage checklist (lattice / hash-based / multivariate)
+  - Actionable recommendations for improving the score
+- Active connections
+- Recent auth events
+- PQ algorithm negotiation events
+- System load and sshd uptime
+
+---
+
+### PQ-Only Test Mode (`server/pq_only_testmode.sh`)
+
+Configures a pure post-quantum sshd that rejects all classical algorithms. Intended for test/staging servers.
+
+```bash
+sudo bash server/pq_only_testmode.sh
+```
+
+Creates a separate systemd service (`evaemon-pqonly-sshd`) on a dedicated port (default 2222) with PQ-only host keys, KEX, and authentication. Classical SSH clients **cannot** connect. See the security guide for details.
 
 ---
 
@@ -292,10 +339,12 @@ sudo bash server/tools/diagnostics.sh
 | `BIN_DIR` | `<repo>/build/bin` | OQS SSH client binaries |
 | `SBIN_DIR` | `<repo>/build/sbin` | OQS sshd binary |
 | `SSH_DIR` | `~/.ssh` | User SSH directory |
-| `ALGORITHMS` | (array, 10 entries) | Supported PQ authentication algorithms |
+| `ALGORITHMS` | (array, 12 entries) | Supported PQ authentication algorithms |
+| `KEY_MAX_AGE_DAYS` | `90` | Maximum key age before rotation is enforced |
+| `CLASSICAL_KEY_PATTERNS` | (array, 6 entries) | Classical key type prefixes for migration scanner |
 | `CLASSICAL_KEYTYPES` | `("ed25519" "rsa")` | Classical key types for hybrid mode |
 | `CLASSICAL_HOST_ALGOS` | `"ssh-ed25519,rsa-sha2-512,rsa-sha2-256"` | Classical algorithm names for sshd_config |
-| `KEX_ALGORITHMS` | (array, 5 entries) | PQ/hybrid Kyber KEX algorithms, preference order |
+| `KEX_ALGORITHMS` | (array, 5 entries) | PQ/hybrid ML-KEM KEX algorithms, preference order |
 | `CLASSICAL_KEX_ALGORITHMS` | `"curve25519-sha256,..."` | Classical KEX fallback for hybrid deployments |
 
 Override `BUILD_DIR` to install to a non-default path:
@@ -323,20 +372,23 @@ Log entries include millisecond-precision timestamps. Successful operations emit
 ### Unit tests (no OQS binary required)
 
 ```bash
-bash shared/tests/unit_tests/test_validation.sh   # 44 tests — input validation
-bash shared/tests/unit_tests/test_logging.sh      # 26 tests — log levels, log_success
-bash shared/tests/unit_tests/test_functions.sh    # 13 tests — retry_with_backoff
-bash shared/tests/unit_tests/test_backup.sh       # 13 tests — backup/restore roundtrip
-bash shared/tests/unit_tests/test_copy_key.sh     # 10 tests — copy_client_key (mock SSH)
-bash shared/tests/unit_tests/test_connect.sh      # 15 tests — connect() KexAlgorithms args
+bash shared/tests/unit_tests/test_validation.sh    # 44 tests — input validation
+bash shared/tests/unit_tests/test_logging.sh       # 26 tests — log levels, log_success
+bash shared/tests/unit_tests/test_functions.sh     # 13 tests — retry_with_backoff
+bash shared/tests/unit_tests/test_backup.sh        # 13 tests — backup/restore roundtrip
+bash shared/tests/unit_tests/test_copy_key.sh      # 10 tests — copy_client_key (mock ssh-copy-id)
+bash shared/tests/unit_tests/test_connect.sh       # 15 tests — connect() KexAlgorithms args
+bash shared/tests/unit_tests/test_migrate_keys.sh  # 16 tests — classical key detection + scanning
+bash shared/tests/unit_tests/test_key_age.sh       #  6 tests — 90-day rotation policy enforcement
+bash shared/tests/unit_tests/test_monitoring.sh    # 10 tests — quantum readiness report scoring
 ```
 
 ### Integration tests (auto-skip OQS-dependent tests if binary absent)
 
 ```bash
-bash shared/tests/integration_tests/test_keygen.sh      # 11 tests — key generation
-bash shared/tests/integration_tests/test_server.sh      # 53 tests — sshd_config, hybrid, KexAlgorithms
-bash shared/tests/integration_tests/test_key_rotation.sh # 14 tests — archive + retry verification
+bash shared/tests/integration_tests/test_keygen.sh       # 11 tests — key generation
+bash shared/tests/integration_tests/test_server.sh       # 53 tests — sshd_config, hybrid, KexAlgorithms
+bash shared/tests/integration_tests/test_key_rotation.sh  # 14 tests — archive + retry verification
 ```
 
-Exit code 0 = all tests passed; 1 = at least one failed. The full suite counts **199 tests, 0 failures**.
+Exit code 0 = all tests passed; 1 = at least one failed. The full suite counts **220+ tests, 0 failures**.

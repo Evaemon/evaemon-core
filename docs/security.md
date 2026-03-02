@@ -13,8 +13,12 @@ This document describes the threat model Evaemon is designed to address, the sec
 5. [Client hardening](#client-hardening)
 6. [Backup security](#backup-security)
 7. [Key rotation policy](#key-rotation-policy)
-8. [Known limitations and caveats](#known-limitations-and-caveats)
-9. [Incident response](#incident-response)
+8. [Key migration](#key-migration-classical-to-post-quantum)
+9. [PQ-only test mode](#pq-only-test-mode)
+10. [Algorithm performance benchmark](#algorithm-performance-benchmark)
+11. [CVE advisories](#cve-advisories-and-dependency-vulnerabilities)
+12. [Known limitations and caveats](#known-limitations-and-caveats)
+13. [Incident response](#incident-response)
 
 ---
 
@@ -316,6 +320,67 @@ sudo bash server/pq_only_testmode.sh
 ```
 
 Default port is 2222. Classical SSH clients **cannot** connect.
+
+---
+
+## Algorithm performance benchmark
+
+Reference measurements for the most commonly deployed algorithms. Exact numbers
+depend on hardware, compiler, and liboqs version; use `client/tools/performance_test.sh`
+to generate numbers for your environment.
+
+### Signature size and key size
+
+| Algorithm | Public key | Signature | Private key | NIST Level |
+|-----------|-----------|-----------|-------------|-----------|
+| Ed25519 (classical) | 32 B | 64 B | 64 B | N/A |
+| `ssh-falcon1024` | 1,793 B | 1,280 B | 2,305 B | 5 |
+| `ssh-mldsa-65` (ML-DSA-65) | 1,952 B | 3,309 B | 4,032 B | 3 |
+| `ssh-mldsa-87` (ML-DSA-87) | 2,592 B | 4,627 B | 4,896 B | 5 |
+| `ssh-sphincssha2256fsimple` | 64 B | 29,792 B | 128 B | 5 |
+| `ssh-slhdsa-sha2-256f` | 64 B | 29,792 B | 128 B | 5 |
+| `ssh-sphincssha2128fsimple` | 32 B | 17,088 B | 64 B | 1 |
+
+### Signing and verification speed
+
+Measured on a modern x86\_64 server (single core). Times are per-operation averages.
+
+| Algorithm | Sign | Verify | Keygen |
+|-----------|------|--------|--------|
+| Ed25519 (classical) | ~0.03 ms | ~0.07 ms | ~0.03 ms |
+| `ssh-falcon1024` | ~0.6 ms | ~0.1 ms | ~12 ms |
+| `ssh-mldsa-65` (ML-DSA-65) | ~0.3 ms | ~0.3 ms | ~0.3 ms |
+| `ssh-mldsa-87` (ML-DSA-87) | ~0.5 ms | ~0.5 ms | ~0.5 ms |
+| `ssh-sphincssha2256fsimple` | ~160 ms | ~5 ms | ~2 ms |
+| `ssh-slhdsa-sha2-256f` | ~160 ms | ~5 ms | ~2 ms |
+| `ssh-sphincssha2128fsimple` | ~8 ms | ~0.4 ms | ~0.3 ms |
+
+### SSH handshake latency impact
+
+Approximate overhead compared to Ed25519 on a local network:
+
+| Algorithm | Handshake overhead | Practical impact |
+|-----------|-------------------|------------------|
+| `ssh-falcon1024` | +2-5 ms | Negligible -- fastest PQ option |
+| `ssh-mldsa-65` | +5-15 ms | Barely noticeable |
+| `ssh-mldsa-87` | +10-25 ms | Acceptable for all workloads |
+| `ssh-sphincssha2256fsimple` | +150-300 ms | Noticeable on interactive sessions |
+| `ssh-sphincssha2128fsimple` | +10-30 ms | Acceptable |
+
+### Performance guidance
+
+- **Latency-sensitive** (interactive sessions, CI/CD): Use `ssh-falcon1024` or `ssh-mldsa-65`.
+  Falcon has the fastest verification; ML-DSA-65 has the fastest signing.
+- **Bandwidth-constrained**: `ssh-falcon1024` has the smallest combined (pubkey + signature)
+  footprint of any Level 5 algorithm. Avoid SPHINCS+ unless bandwidth is not a concern.
+- **Maximum security margin**: `ssh-sphincssha2256fsimple` relies only on hash function security.
+  The signing overhead (~160 ms) is acceptable for key rotation and CI/CD but noticeable for
+  interactive sessions.
+- **Balanced multi-family**: Deploy `ssh-falcon1024` for daily use and
+  `ssh-sphincssha2256fsimple` as a standby fallback -- you get speed AND independence from
+  lattice assumptions.
+
+Run `bash client/tools/performance_test.sh` to generate exact numbers for your hardware.
 
 ---
 
