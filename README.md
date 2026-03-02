@@ -26,7 +26,7 @@ The wizard guides you through building OQS-OpenSSH, configuring the server, and 
 - **Multi-algorithm server** — generate and advertise multiple host key types at once; clients negotiate the algorithm they support
 - **Reliable operations** — exponential-backoff retry logic on TCP checks, SSH handshakes, and key rotation verification
 - **Non-invasive** — runs a separate sshd process; your system OpenSSH is never modified
-- **Interactive wizard** for all common operations; every tool also works standalone
+- **Branded interactive wizard** — dark cyan-on-black terminal GUI (whiptail); EVAEMON ASCII logo splash on launch; OQS build status shown at a glance in the main menu; dynamic `[INSTALLED]` / `[NOT BUILT - START HERE]` labels on every Build menu item; the build runs in the background and streams a step-aware progress gauge (`Step 1/7 — Installing dependencies` … `Step 7/7 — Finalizing installation`); failed builds offer an inline scrollable log viewer; every tool also works standalone without the wizard
 - **Client tools** — key generation (PQ and classical), server copy, connection, backup/restore, health check, key rotation, debug, performance benchmark
 - **Server tools** — setup, monitoring, update/rebuild, diagnostics
 - **Shared library** — centralised logging (with millisecond timestamps and `log_success`), validation, retry helpers, and configuration used by every script
