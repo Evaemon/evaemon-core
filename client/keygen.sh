@@ -6,11 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-# Determine the real (non-root) user when script is run with sudo
-if [ -n "$SUDO_USER" ]; then
+# Determine the real (non-root) user for chown/sudo -u calls.
+# SSH_DIR is already resolved to the correct home by config.sh.
+if [[ -n "${SUDO_USER}" ]]; then
     REAL_USER="${SUDO_USER}"
-    REAL_USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-    SSH_DIR="${REAL_USER_HOME}/.ssh"
 else
     REAL_USER="$(whoami)"
 fi
@@ -55,6 +54,7 @@ generate_key() {
 
 # Main function
 main() {
+    require_oqs_build
     echo "Select key type:"
     echo "1. Post-quantum key"
     echo "2. Classical key (Ed25519 or RSA)"

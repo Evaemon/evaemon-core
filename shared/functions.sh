@@ -64,27 +64,43 @@ list_algorithms() {
             "ssh-falcon1024")
                 echo "   ↳ Recommended: Fast lattice-based signing, NIST Level 5 security"
                 ;;
-            "ssh-dilithium5")
-                echo "   ↳ NIST PQC winner, lattice-based with strong security guarantees"
-                ;;
-            "ssh-sphincsharaka192frobust")
-                echo "   ↳ Hash-based signature scheme, quantum-resistant with minimal assumptions"
-                ;;
-            "ssh-sphincssha256128frobust")
-                echo "   ↳ SPHINCS+ variant using SHA-256, faster but lower security level"
-                ;;
-            "ssh-sphincssha256192frobust")
-                echo "   ↳ SPHINCS+ SHA-256 variant with NIST Level 3-4 security"
-                ;;
             "ssh-falcon512")
-                echo "   ↳ Faster Falcon variant, NIST Level 1 security, suitable for constrained devices"
+                echo "   ↳ Falcon variant, NIST Level 1 security, suitable for constrained devices"
                 ;;
-            "ssh-dilithium2")
-                echo "   ↳ Lighter Dilithium variant, NIST Level 2 security"
+            "ssh-mldsa-87")
+                echo "   ↳ ML-DSA-87 (NIST FIPS 204), lattice-based, NIST Level 5 security"
                 ;;
-            "ssh-dilithium3")
-                echo "   ↳ Medium Dilithium variant, NIST Level 3 security"
+            "ssh-mldsa-65")
+                echo "   ↳ ML-DSA-65 (NIST FIPS 204), lattice-based, NIST Level 3 security"
+                ;;
+            "ssh-mldsa-44")
+                echo "   ↳ ML-DSA-44 (NIST FIPS 204), lattice-based, NIST Level 2 security"
+                ;;
+            "ssh-sphincssha2128fsimple")
+                echo "   ↳ SPHINCS+-SHA2-128f (NIST FIPS 205), hash-based, minimal assumptions"
+                ;;
+            "ssh-sphincssha2256fsimple")
+                echo "   ↳ SPHINCS+-SHA2-256f (NIST FIPS 205), hash-based, NIST Level 5 security"
+                ;;
+            "ssh-mayo2")
+                echo "   ↳ MAYO-2, oil-and-vinegar multivariate, compact signatures"
+                ;;
+            "ssh-mayo3")
+                echo "   ↳ MAYO-3, oil-and-vinegar multivariate, NIST Level 3 security"
+                ;;
+            "ssh-mayo5")
+                echo "   ↳ MAYO-5, oil-and-vinegar multivariate, NIST Level 5 security"
                 ;;
         esac
     done
+}
+
+# require_oqs_build — abort with a helpful message if OQS-OpenSSH has not
+# been built yet.  Call this at the top of any script that invokes binaries
+# from ${BIN_DIR} or ${SBIN_DIR}.
+require_oqs_build() {
+    if [[ ! -x "${BIN_DIR}/ssh" ]]; then
+        log_fatal "OQS-OpenSSH is not installed (${BIN_DIR}/ssh not found)." \
+                  "Run option 1 — 'Build and install OQS-OpenSSH' — first."
+    fi
 }

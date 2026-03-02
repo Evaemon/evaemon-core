@@ -12,31 +12,47 @@ INSTALL_PREFIX="${BUILD_DIR}"
 
 # Repository information
 LIBOQS_REPO="https://github.com/open-quantum-safe/liboqs.git"
-# Use the release tag that matches OQS-OpenSSH OQS-v9.
-# MAYO support (required by OQS-v9) was added in liboqs 0.11.0; 0.10.1 lacks it.
-# When upgrading OPENSSH_BRANCH, update this tag to the matching liboqs release.
+# OQS-OpenSSH OQS-v10 (based on OpenSSH 10.2) uses liboqs main at build time.
+# Pin to the latest stable release; 0.11.0 is the minimum that includes
+# ML-KEM, ML-DSA (FIPS 204), and MAYO support.
 LIBOQS_BRANCH="0.11.0"
 
 OPENSSH_REPO="https://github.com/open-quantum-safe/openssh.git"
-OPENSSH_BRANCH="OQS-v9"
+OPENSSH_BRANCH="OQS-v10"
 
 # System directories
 OPENSSL_SYS_DIR="/usr"
-SSH_DIR="${HOME}/.ssh"
+# When a script is invoked via sudo, $HOME resolves to /root rather than the
+# invoking user's home directory.  Use $SUDO_USER (set by sudo) to find the
+# real home so all scripts consistently look in the correct ~/.ssh directory.
+if [[ -n "${SUDO_USER}" ]]; then
+    _sudo_home="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    if [[ -z "${_sudo_home}" ]]; then
+        echo "ERROR: cannot resolve home directory for SUDO_USER='${SUDO_USER}'" >&2
+        exit 1
+    fi
+    SSH_DIR="${_sudo_home}/.ssh"
+    unset _sudo_home
+else
+    SSH_DIR="${HOME}/.ssh"
+fi
 
-# Supported algorithms
-# Algorithm names must match the key types built into OQS-OpenSSH OQS-v9 with
-# liboqs 0.11.0. ML-DSA names (mldsa44/66/87) exist but are intentionally
-# omitted — use dilithium2/3/5 which are the stable aliases in OQS-v9.
+# Supported algorithms — names must match OQS-OpenSSH OQS-v10 / liboqs 0.11.0.
+# OQS-v10 dropped the old Dilithium and SPHINCS+-haraka/robust names:
+#   dilithium2/3/5        → mldsa-44/65/87  (NIST FIPS 204 / ML-DSA)
+#   sphincsharaka*        → removed entirely
+#   sphincssha256*robust  → sphincssha2*fsimple
 ALGORITHMS=(
     "ssh-falcon1024"
-    "ssh-dilithium5"
-    "ssh-sphincsharaka192frobust"
-    "ssh-sphincssha256128frobust"
-    "ssh-sphincssha256192frobust"
+    "ssh-mldsa-87"
+    "ssh-sphincssha2128fsimple"
+    "ssh-sphincssha2256fsimple"
     "ssh-falcon512"
-    "ssh-dilithium2"
-    "ssh-dilithium3"
+    "ssh-mldsa-65"
+    "ssh-mldsa-44"
+    "ssh-mayo2"
+    "ssh-mayo3"
+    "ssh-mayo5"
 )
 
 # Classical key types for hybrid mode (passed to ssh-keygen -t)
@@ -46,14 +62,16 @@ CLASSICAL_KEYTYPES=("ed25519" "rsa")
 CLASSICAL_HOST_ALGOS="ssh-ed25519,rsa-sha2-512,rsa-sha2-256"
 
 # Post-quantum and hybrid key exchange algorithms (for KexAlgorithms directive).
-# Hybrid algorithms combine a classical base (ECDH/X25519) with Kyber for
-# defense-in-depth: quantum-safe AND classically-secure at the same time.
+# OQS-v10 uses ML-KEM (NIST FIPS 203) names; the old kyber-*r3-*-d00 draft
+# names from OQS-v9 are no longer recognised by the binary.
+# Hybrid variants (mlkem*nistp*/x25519) are preferred: they are quantum-safe
+# AND classically-secure, so security cannot regress even if ML-KEM is broken.
 KEX_ALGORITHMS=(
-    "ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org"
-    "ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org"
-    "x25519-kyber-512r3-sha256-d00@openquantumsafe.org"
-    "kyber-1024r3-sha512-d00@openquantumsafe.org"
-    "kyber-512r3-sha256-d00@openquantumsafe.org"
+    "mlkem1024nistp384-sha384"
+    "mlkem768x25519-sha256"
+    "mlkem768nistp256-sha256"
+    "mlkem1024-sha384"
+    "mlkem768-sha256"
 )
 
 # Pre-computed comma-separated PQ KEX list for SSH client -o KexAlgorithms=...

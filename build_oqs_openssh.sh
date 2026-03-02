@@ -15,7 +15,7 @@ source "${SCRIPT_DIR}/shared/functions.sh"
 LOG_FILE="${BUILD_DIR}/oqs_build.log"
 
 install_dependencies() {
-    log_info "Installing dependencies..."
+    log_info "Installing dependencies (mode: ${BUILD_MODE})..."
 
     # Skip the ssl-dev package when a suitable OpenSSL (>= 1.1.1) is already
     # present (e.g. built from source). Installing the system package alongside
@@ -36,19 +36,37 @@ install_dependencies() {
     fi
 
     if [ -f /etc/debian_version ]; then
-        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib1g-dev git doxygen graphviz"
+        # openssh-client provides the system ssh(1) used by copy_key_to_server.sh
+        # for the bootstrap key-copy step (before OQS-OpenSSH is built).
+        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib1g-dev git doxygen graphviz openssh-client"
         [[ "$need_ssl_dev" == true ]] && pkgs="${pkgs} libssl-dev"
+        # On a server the system sshd must be running on port 22 so clients can
+        # use ssh-copy-id for the initial PQ key bootstrap before OQS sshd is set up.
+        [[ "${BUILD_MODE}" == "server" ]] && pkgs="${pkgs} openssh-server"
         sudo apt-get update
         # shellcheck disable=SC2086
         sudo apt-get install -y ${pkgs}
+        # Start and enable the system sshd so the port-22 bootstrap works immediately.
+        # Debian/Ubuntu calls the service 'ssh'; some variants use 'sshd'.
+        if [[ "${BUILD_MODE}" == "server" ]]; then
+            sudo systemctl enable ssh 2>/dev/null || sudo systemctl enable sshd 2>/dev/null || true
+            sudo systemctl start  ssh 2>/dev/null || sudo systemctl start  sshd 2>/dev/null || true
+        fi
     elif [ -f /etc/redhat-release ]; then
-        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib-devel git doxygen graphviz pkg-config"
+        # openssh-clients provides the system ssh(1) on RPM-based distributions.
+        local pkgs="autoconf automake cmake gcc libtool make ninja-build zlib-devel git doxygen graphviz pkg-config openssh-clients"
         [[ "$need_ssl_dev" == true ]] && pkgs="${pkgs} openssl-devel"
+        [[ "${BUILD_MODE}" == "server" ]] && pkgs="${pkgs} openssh-server"
         # shellcheck disable=SC2086
         sudo dnf install -y ${pkgs}
+        if [[ "${BUILD_MODE}" == "server" ]]; then
+            sudo systemctl enable --now sshd 2>/dev/null || true
+        fi
     else
         log_warn "Unsupported distribution. Please install dependencies manually."
-        log_warn "Required: autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git"
+        log_warn "Required: autoconf automake cmake gcc libtool libssl-dev make ninja-build zlib1g-dev git openssh-client"
+        [[ "${BUILD_MODE}" == "server" ]] && \
+            log_warn "Server mode also requires: openssh-server (start and enable its systemd service)"
     fi
 
     # Ensure the sshd privilege-separation user and directory exist
@@ -110,6 +128,10 @@ handle_shared_libraries() {
 
 # Main installation process
 main() {
+    # Accept an optional mode argument: 'server' or 'client' (default: client).
+    # Used by install_dependencies to decide whether openssh-server is needed.
+    BUILD_MODE="${1:-client}"
+
     log_section "OQS-OpenSSH Installation"
     log_info "Starting OQS-OpenSSH installation..."
 
@@ -174,7 +196,12 @@ main() {
     # previous failed run don't persist (C4 fix).
     log_info "Cloning OpenSSH..."
     rm -rf "${BUILD_DIR}/openssh"
-    git clone --branch "${OPENSSH_BRANCH}" --single-branch --depth 1 "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
+    # Full clone (no --depth 1): shallow clones of OQS-OpenSSH OQS-v9 intermittently
+    # fail with "fatal: unable to read tree <hash>" during the checkout phase because
+    # the server's shallow pack omits tree objects that git needs to populate the
+    # working directory.  A full clone avoids this without meaningful overhead since
+    # the build already downloads ~180 MiB regardless.
+    git clone --branch "${OPENSSH_BRANCH}" --single-branch "${OPENSSH_REPO}" "${BUILD_DIR}/openssh"
 
     # Patch configure.ac to accept OpenSSL 3.5+ (upstream check only tested up to 3.3/3.4).
     # Downgrade the hard error to a warning so the build continues on newer OpenSSL.
