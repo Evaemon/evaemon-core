@@ -83,8 +83,9 @@ show_client_menu() {
 }
 
 handle_build() {
+    local mode="${1:-client}"
     echo "Starting OQS-OpenSSH build process..."
-    if bash "${SCRIPT_DIR}/build_oqs_openssh.sh"; then
+    if bash "${SCRIPT_DIR}/build_oqs_openssh.sh" "${mode}"; then
         echo "Build completed successfully!"
     else
         echo "Build process failed. Please check the logs."
@@ -161,7 +162,7 @@ handle_server_menu() {
 
         case $choice in
             1)
-                handle_build
+                handle_build server
                 read -rp "Press Enter to continue..."
                 ;;
             2)
@@ -204,7 +205,7 @@ handle_client_menu() {
 
         case $choice in
             1)
-                handle_build
+                handle_build client
                 read -rp "Press Enter to continue..."
                 ;;
             2)
