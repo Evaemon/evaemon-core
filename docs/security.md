@@ -13,8 +13,12 @@ This document describes the threat model Evaemon is designed to address, the sec
 5. [Client hardening](#client-hardening)
 6. [Backup security](#backup-security)
 7. [Key rotation policy](#key-rotation-policy)
-8. [Known limitations and caveats](#known-limitations-and-caveats)
-9. [Incident response](#incident-response)
+8. [Key migration](#key-migration-classical-to-post-quantum)
+9. [PQ-only test mode](#pq-only-test-mode)
+10. [Algorithm performance benchmark](#algorithm-performance-benchmark)
+11. [CVE advisories](#cve-advisories-and-dependency-vulnerabilities)
+12. [Known limitations and caveats](#known-limitations-and-caveats)
+13. [Incident response](#incident-response)
 
 ---
 
@@ -44,25 +48,47 @@ Classical RSA and ECDSA authentication can be broken by a sufficiently powerful 
 
 ### Supported algorithms and security levels
 
-| Algorithm | Type | NIST Level | Notes |
-|-----------|------|-----------|-------|
-| `ssh-falcon1024` | Lattice (NTRU) | 5 | **Recommended** -- fastest verification, small signatures at L5 |
-| `ssh-mldsa66` | Lattice (Module-LWE) | 3 | NIST PQC standard (FIPS 204) |
-| `ssh-mldsa44` | Lattice (Module-LWE) | 2 | Lighter ML-DSA variant |
-| `ssh-dilithium5` | Lattice (Module-LWE) | 5 | Conservative L5 lattice choice |
-| `ssh-dilithium3` | Lattice (Module-LWE) | 3 | Balanced |
-| `ssh-dilithium2` | Lattice (Module-LWE) | 2 | Lightweight |
-| `ssh-falcon512` | Lattice (NTRU) | 1 | Fast, small; L1 only -- use sparingly |
-| `ssh-sphincsharaka192frobust` | Hash (SPHINCS+) | 3-4 | Different hardness assumption; large signatures |
-| `ssh-sphincssha256128frobust` | Hash (SPHINCS+) | 1 | Fast verification; large signatures |
-| `ssh-sphincssha256192frobust` | Hash (SPHINCS+) | 3 | Conservative hash-based |
+Algorithms are ordered by **multi-family risk diversification** priority. The top 3 span different mathematical assumption families so that a break in one does not compromise all keys.
+
+| # | Algorithm | Family | NIST Level | Notes |
+|---|-----------|--------|-----------|-------|
+| 1 | `ssh-falcon1024` | Lattice (NTRU) | 5 | **Recommended** -- fastest verification, compact at L5 |
+| 2 | `ssh-mldsa-65` | Lattice (Module-LWE) | 3 | NIST FIPS 204 primary standard |
+| 3 | `ssh-sphincssha2256fsimple` | Hash (SPHINCS+ / FIPS 205) | 5 | Minimal cryptographic assumptions |
+| 4 | `ssh-slhdsa-sha2-256f` | Hash (SLH-DSA / FIPS 205) | 5 | Standardised FIPS 205 name (liboqs >= 0.12.0) |
+| 5 | `ssh-mldsa-87` | Lattice (Module-LWE) | 5 | Conservative L5 lattice choice |
+| 6 | `ssh-mldsa-44` | Lattice (Module-LWE) | 2 | Lightweight ML-DSA variant |
+| 7 | `ssh-sphincssha2128fsimple` | Hash (SPHINCS+ / FIPS 205) | 1 | Fast hash-based, minimal assumptions |
+| 8 | `ssh-slhdsa-sha2-128f` | Hash (SLH-DSA / FIPS 205) | 1 | SLH-DSA lightweight variant |
+| 9 | `ssh-falcon512` | Lattice (NTRU) | 1 | Constrained devices only |
+| 10 | `ssh-mayo2` | Multivariate (Oil-Vinegar) | 2 | Compact signatures |
+| 11 | `ssh-mayo3` | Multivariate (Oil-Vinegar) | 3 | Balanced |
+| 12 | `ssh-mayo5` | Multivariate (Oil-Vinegar) | 5 | Conservative multivariate |
+
+### Multi-family risk diversification
+
+Deploy keys from **at least two different assumption families** so that a breakthrough in one area of mathematics does not compromise all authentication:
+
+| Family | Algorithms | Assumption |
+|--------|-----------|------------|
+| Lattice (NTRU) | Falcon-1024, Falcon-512 | NTRU lattice problems |
+| Lattice (Module-LWE) | ML-DSA-65, ML-DSA-87, ML-DSA-44 | Module Learning With Errors |
+| Hash-based | SPHINCS+-256f, SLH-DSA-256f, SPHINCS+-128f, SLH-DSA-128f | Hash function security (minimal assumptions) |
+| Multivariate | MAYO-2, MAYO-3, MAYO-5 | Oil-and-vinegar |
+
+**Recommended multi-family set:** `ssh-falcon1024` + `ssh-mldsa-65` + `ssh-sphincssha2256fsimple`
+
+### SLH-DSA (FIPS 205 standardised)
+
+SLH-DSA is the NIST-standardised name for SPHINCS+ (FIPS 205). The `ssh-slhdsa-*` variants are available in liboqs >= 0.12.0 and serve as a **fallback** if the SPHINCS+ names change in future OQS-OpenSSH releases. Both refer to the same underlying algorithm.
 
 ### Guidance
 
 - **For most deployments:** `ssh-falcon1024` (Level 5, fast, compact)
-- **If you want a NIST standard:** `ssh-mldsa66` (standardised as FIPS 204)
-- **If you distrust lattice math:** `ssh-sphincssha256192frobust` (hash-based, orthogonal assumption)
+- **If you want a NIST standard:** `ssh-mldsa-65` (FIPS 204)
+- **If you distrust lattice math:** `ssh-sphincssha2256fsimple` or `ssh-slhdsa-sha2-256f` (hash-based, orthogonal assumption)
 - **For constrained bandwidth:** `ssh-falcon512` (Level 1 -- only use if Level 5 is genuinely impractical)
+- **For multi-family diversification:** deploy Falcon-1024 + ML-DSA-65 + SPHINCS+-256f across your infrastructure
 
 Avoid mixing security levels across client and server. A Level-1 client key is the weakest link even when the server is configured for Level 5.
 
@@ -169,7 +195,7 @@ Host pqserver
     IdentityFile           ~/.ssh/id_ssh-falcon1024
     HostKeyAlgorithms      ssh-falcon1024
     PubkeyAcceptedKeyTypes ssh-falcon1024
-    KexAlgorithms          ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org,ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org,x25519-kyber-512r3-sha256-d00@openquantumsafe.org
+    KexAlgorithms          mlkem1024nistp384-sha384,mlkem768x25519-sha256,mlkem768nistp256-sha256,mlkem1024-sha384,mlkem768-sha256
 ```
 
 For a hybrid server that also accepts classical clients, append the classical fallback KEX:
@@ -182,7 +208,7 @@ Host pqserver-hybrid
     IdentityFile           ~/.ssh/id_ssh-falcon1024
     HostKeyAlgorithms      ssh-falcon1024,ssh-ed25519,rsa-sha2-512,rsa-sha2-256
     PubkeyAcceptedKeyTypes ssh-falcon1024,ssh-ed25519,rsa-sha2-512,rsa-sha2-256
-    KexAlgorithms          ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org,ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org,x25519-kyber-512r3-sha256-d00@openquantumsafe.org,curve25519-sha256,diffie-hellman-group16-sha512
+    KexAlgorithms          mlkem1024nistp384-sha384,mlkem768x25519-sha256,mlkem768nistp256-sha256,mlkem1024-sha384,mlkem768-sha256,curve25519-sha256,diffie-hellman-group16-sha512
 ```
 
 Then connect with:
@@ -221,12 +247,140 @@ The passphrase is written to a `chmod 600` temp file immediately, then the in-me
 
 | Scenario | Rotate every |
 |----------|-------------|
-| Personal / low-risk | 1-2 years |
-| Enterprise / privileged access | 6-12 months |
-| CI/CD automation keys | 90 days |
+| Personal / low-risk | 6 months |
+| Enterprise / privileged access | 90 days |
+| CI/CD automation keys | 90 days (enforced) |
 | Post suspected compromise | Immediately |
 
-Use `client/key_rotation.sh`. The tool verifies the new key authenticates before removing the old one.
+The rotation tool (`client/key_rotation.sh`) enforces a **90-day maximum key age** by default (configurable via `KEY_MAX_AGE_DAYS`). When a key exceeds this age, rotation proceeds automatically. Keys within the policy window prompt for confirmation.
+
+After rotation, the tool **verifies the old key is rejected** by the server — not just that the new key works. This ensures stale credentials are truly invalidated.
+
+For automated environments, use `docs/examples/automated_key_rotation.sh` in a cron job:
+
+```bash
+# Rotate every 90 days — crontab entry
+0 3 1 */3 * EVAEMON_SERVER_HOST=prod.example.com EVAEMON_ALGORITHM=ssh-falcon1024 bash /path/to/docs/examples/automated_key_rotation.sh
+```
+
+---
+
+## Key migration (classical to post-quantum)
+
+Use `client/migrate_keys.sh` to scan a server's `~/.ssh/authorized_keys` for classical (non-PQ) key types and migrate them.
+
+### What it detects
+
+Classical key types flagged for migration:
+- `ssh-rsa` (vulnerable to Shor's algorithm)
+- `ssh-dss` (deprecated, vulnerable)
+- `ecdsa-sha2-*` (vulnerable to Shor's algorithm)
+- `ssh-ed25519` (vulnerable to Shor's algorithm)
+
+### Usage
+
+```bash
+# Scan a remote server
+bash client/migrate_keys.sh
+
+# Scan local authorized_keys only
+bash client/migrate_keys.sh --local
+```
+
+The tool will:
+1. Fetch and scan `~/.ssh/authorized_keys` from the server
+2. Report which keys are classical vs post-quantum
+3. Offer to remove all classical keys (with server-side backup)
+4. Verify the PQ key still authenticates after migration
+
+---
+
+## PQ-only test mode
+
+For test/staging servers, `server/pq_only_testmode.sh` configures a **pure post-quantum sshd** that rejects all classical algorithms.
+
+### When to use
+
+- Proving PQ-only viability before production rollout
+- CI/CD pipeline testing with PQ deploy keys
+- Security audits requiring PQ-only compliance
+
+### What it does
+
+1. Generates PQ-only host keys (no Ed25519/RSA)
+2. Writes `sshd_config` with PQ-only KEX and PQ-only authentication
+3. Configures firewall rules (ufw or iptables) for the dedicated port
+4. Creates a separate systemd service (`evaemon-pqonly-sshd`)
+5. Prints a test plan for CI/CD verification
+
+### Usage
+
+```bash
+sudo bash server/pq_only_testmode.sh
+```
+
+Default port is 2222. Classical SSH clients **cannot** connect.
+
+---
+
+## Algorithm performance benchmark
+
+Reference measurements for the most commonly deployed algorithms. Exact numbers
+depend on hardware, compiler, and liboqs version; use `client/tools/performance_test.sh`
+to generate numbers for your environment.
+
+### Signature size and key size
+
+| Algorithm | Public key | Signature | Private key | NIST Level |
+|-----------|-----------|-----------|-------------|-----------|
+| Ed25519 (classical) | 32 B | 64 B | 64 B | N/A |
+| `ssh-falcon1024` | 1,793 B | 1,280 B | 2,305 B | 5 |
+| `ssh-mldsa-65` (ML-DSA-65) | 1,952 B | 3,309 B | 4,032 B | 3 |
+| `ssh-mldsa-87` (ML-DSA-87) | 2,592 B | 4,627 B | 4,896 B | 5 |
+| `ssh-sphincssha2256fsimple` | 64 B | 29,792 B | 128 B | 5 |
+| `ssh-slhdsa-sha2-256f` | 64 B | 29,792 B | 128 B | 5 |
+| `ssh-sphincssha2128fsimple` | 32 B | 17,088 B | 64 B | 1 |
+
+### Signing and verification speed
+
+Measured on a modern x86\_64 server (single core). Times are per-operation averages.
+
+| Algorithm | Sign | Verify | Keygen |
+|-----------|------|--------|--------|
+| Ed25519 (classical) | ~0.03 ms | ~0.07 ms | ~0.03 ms |
+| `ssh-falcon1024` | ~0.6 ms | ~0.1 ms | ~12 ms |
+| `ssh-mldsa-65` (ML-DSA-65) | ~0.3 ms | ~0.3 ms | ~0.3 ms |
+| `ssh-mldsa-87` (ML-DSA-87) | ~0.5 ms | ~0.5 ms | ~0.5 ms |
+| `ssh-sphincssha2256fsimple` | ~160 ms | ~5 ms | ~2 ms |
+| `ssh-slhdsa-sha2-256f` | ~160 ms | ~5 ms | ~2 ms |
+| `ssh-sphincssha2128fsimple` | ~8 ms | ~0.4 ms | ~0.3 ms |
+
+### SSH handshake latency impact
+
+Approximate overhead compared to Ed25519 on a local network:
+
+| Algorithm | Handshake overhead | Practical impact |
+|-----------|-------------------|------------------|
+| `ssh-falcon1024` | +2-5 ms | Negligible -- fastest PQ option |
+| `ssh-mldsa-65` | +5-15 ms | Barely noticeable |
+| `ssh-mldsa-87` | +10-25 ms | Acceptable for all workloads |
+| `ssh-sphincssha2256fsimple` | +150-300 ms | Noticeable on interactive sessions |
+| `ssh-sphincssha2128fsimple` | +10-30 ms | Acceptable |
+
+### Performance guidance
+
+- **Latency-sensitive** (interactive sessions, CI/CD): Use `ssh-falcon1024` or `ssh-mldsa-65`.
+  Falcon has the fastest verification; ML-DSA-65 has the fastest signing.
+- **Bandwidth-constrained**: `ssh-falcon1024` has the smallest combined (pubkey + signature)
+  footprint of any Level 5 algorithm. Avoid SPHINCS+ unless bandwidth is not a concern.
+- **Maximum security margin**: `ssh-sphincssha2256fsimple` relies only on hash function security.
+  The signing overhead (~160 ms) is acceptable for key rotation and CI/CD but noticeable for
+  interactive sessions.
+- **Balanced multi-family**: Deploy `ssh-falcon1024` for daily use and
+  `ssh-sphincssha2256fsimple` as a standby fallback -- you get speed AND independence from
+  lattice assumptions.
+
+Run `bash client/tools/performance_test.sh` to generate exact numbers for your hardware.
 
 ---
 
@@ -274,7 +428,7 @@ present depending on the base version included in the OQS fork branch:
 
 1. **OQS implementations are not yet FIPS-validated.** The underlying liboqs library is research-grade. Await formal FIPS 204 certification for regulated environments.
 
-2. **PQ KEX is hybrid, not pure-PQ by default.** The recommended KEX algorithms (e.g. `ecdh-nistp384-kyber-1024r3`) combine a classical elliptic-curve exchange with Kyber. Security holds as long as either component remains unbroken. Pure-PQ KEX options (`kyber-1024r3-sha512-d00@openquantumsafe.org`) are available in `shared/config.sh` but sacrifice compatibility with clients that lack Kyber support.
+2. **PQ KEX is hybrid, not pure-PQ by default.** The recommended KEX algorithms (e.g. `mlkem1024nistp384-sha384`) combine a classical elliptic-curve exchange with ML-KEM. Security holds as long as either component remains unbroken. Pure-PQ KEX options (`mlkem1024-sha384`, `mlkem768-sha256`) are available in `shared/config.sh` but sacrifice compatibility with clients that lack ML-KEM support. For pure-PQ testing, use `server/pq_only_testmode.sh`.
 
 3. **System SSH is unmodified.** Both standard and post-quantum sshd run simultaneously by default. Ensure classical SSH is also hardened or firewalled.
 

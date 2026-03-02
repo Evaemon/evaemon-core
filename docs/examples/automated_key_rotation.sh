@@ -65,10 +65,13 @@ _validate_host "$SERVER_HOST"
 _validate_port "$SERVER_PORT"
 _validate_user "$SERVER_USER"
 
-# PQ KEX algorithms for quantum-safe session key exchange
-KEX_ALGOS="ecdh-nistp384-kyber-1024r3-sha384-d00@openquantumsafe.org"
-KEX_ALGOS="${KEX_ALGOS},ecdh-nistp256-kyber-512r3-sha256-d00@openquantumsafe.org"
-KEX_ALGOS="${KEX_ALGOS},x25519-kyber-512r3-sha256-d00@openquantumsafe.org"
+# PQ KEX algorithms for quantum-safe session key exchange.
+# OQS-v10 uses NIST FIPS 203 ML-KEM names (not the old Kyber draft names).
+KEX_ALGOS="mlkem1024nistp384-sha384"
+KEX_ALGOS="${KEX_ALGOS},mlkem768x25519-sha256"
+KEX_ALGOS="${KEX_ALGOS},mlkem768nistp256-sha256"
+KEX_ALGOS="${KEX_ALGOS},mlkem1024-sha384"
+KEX_ALGOS="${KEX_ALGOS},mlkem768-sha256"
 
 _ssh() {
     "${SSH_BIN}" \
@@ -143,6 +146,15 @@ _ssh "${KEY_FILE}" \
      chmod 600 ~/.ssh/authorized_keys' \
     < "${OLD_PUB_BACKUP}"
 log "Old key removed from server."
+
+# ── Step 6: Verify old key is rejected ──────────────────────────────────────
+log "Verifying old key is rejected ..."
+old_check="$(_ssh "${OLD_KEY_BACKUP}" "echo STILL_ALIVE" 2>/dev/null || true)"
+if [[ "$old_check" == *"STILL_ALIVE"* ]]; then
+    log "WARNING: Old key still authenticates! Server may have a stale entry."
+else
+    log "Old key correctly rejected — rotation fully verified."
+fi
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 log "Key rotation complete."

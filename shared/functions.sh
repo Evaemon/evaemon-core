@@ -58,38 +58,46 @@ _configured_port() {
 # Shared functions
 list_algorithms() {
     echo "Available algorithms:"
+    echo "(Top 3 recommended for multi-family risk diversification)"
+    echo
     for i in "${!ALGORITHMS[@]}"; do
         echo "$((i+1)). ${ALGORITHMS[$i]}"
         case ${ALGORITHMS[$i]} in
             "ssh-falcon1024")
-                echo "   ↳ Recommended: Fast lattice-based signing, NIST Level 5 security"
+                echo "   ↳ ★ Recommended: Fast lattice-based (NTRU), NIST Level 5 security"
                 ;;
             "ssh-falcon512")
-                echo "   ↳ Falcon variant, NIST Level 1 security, suitable for constrained devices"
+                echo "   ↳ Falcon variant, NIST Level 1, suitable for constrained devices"
                 ;;
             "ssh-mldsa-87")
-                echo "   ↳ ML-DSA-87 (NIST FIPS 204), lattice-based, NIST Level 5 security"
+                echo "   ↳ ML-DSA-87 (NIST FIPS 204), lattice-based, NIST Level 5"
                 ;;
             "ssh-mldsa-65")
-                echo "   ↳ ML-DSA-65 (NIST FIPS 204), lattice-based, NIST Level 3 security"
+                echo "   ↳ ★ ML-DSA-65 (NIST FIPS 204), NIST primary standard, Level 3"
                 ;;
             "ssh-mldsa-44")
-                echo "   ↳ ML-DSA-44 (NIST FIPS 204), lattice-based, NIST Level 2 security"
+                echo "   ↳ ML-DSA-44 (NIST FIPS 204), lattice-based, NIST Level 2"
                 ;;
             "ssh-sphincssha2128fsimple")
-                echo "   ↳ SPHINCS+-SHA2-128f (NIST FIPS 205), hash-based, minimal assumptions"
+                echo "   ↳ SPHINCS+-SHA2-128f (FIPS 205), hash-based, minimal assumptions"
                 ;;
             "ssh-sphincssha2256fsimple")
-                echo "   ↳ SPHINCS+-SHA2-256f (NIST FIPS 205), hash-based, NIST Level 5 security"
+                echo "   ↳ ★ SPHINCS+-SHA2-256f (FIPS 205), hash-based, NIST Level 5"
+                ;;
+            "ssh-slhdsa-sha2-128f")
+                echo "   ↳ SLH-DSA-SHA2-128f (FIPS 205 standardised), hash-based fallback"
+                ;;
+            "ssh-slhdsa-sha2-256f")
+                echo "   ↳ SLH-DSA-SHA2-256f (FIPS 205 standardised), hash-based fallback, Level 5"
                 ;;
             "ssh-mayo2")
                 echo "   ↳ MAYO-2, oil-and-vinegar multivariate, compact signatures"
                 ;;
             "ssh-mayo3")
-                echo "   ↳ MAYO-3, oil-and-vinegar multivariate, NIST Level 3 security"
+                echo "   ↳ MAYO-3, oil-and-vinegar multivariate, NIST Level 3"
                 ;;
             "ssh-mayo5")
-                echo "   ↳ MAYO-5, oil-and-vinegar multivariate, NIST Level 5 security"
+                echo "   ↳ MAYO-5, oil-and-vinegar multivariate, NIST Level 5"
                 ;;
         esac
     done

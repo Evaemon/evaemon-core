@@ -69,8 +69,8 @@ describe "connect — PQ-only mode (mode 1)"
 it "passes KexAlgorithms option to ssh"
 assert_contains "KexAlgorithms=" "$_PQ_ARGS"
 
-it "KexAlgorithms contains a hybrid Kyber algorithm"
-assert_contains "kyber" "$_PQ_ARGS"
+it "KexAlgorithms contains an ML-KEM algorithm"
+assert_contains "mlkem" "$_PQ_ARGS"
 
 it "KexAlgorithms does not contain classical-only curve25519-sha256"
 echo "$_PQ_ARGS" | grep -q "KexAlgorithms=.*curve25519-sha256" \
@@ -112,8 +112,8 @@ describe "connect — hybrid mode (mode 2)"
 it "passes KexAlgorithms option to ssh"
 assert_contains "KexAlgorithms=" "$_HY_ARGS"
 
-it "hybrid KexAlgorithms contains a Kyber algorithm"
-assert_contains "kyber" "$_HY_ARGS"
+it "hybrid KexAlgorithms contains an ML-KEM algorithm"
+assert_contains "mlkem" "$_HY_ARGS"
 
 it "hybrid KexAlgorithms contains classical fallback curve25519-sha256"
 assert_contains "curve25519-sha256" "$_HY_ARGS"

@@ -82,6 +82,7 @@ ensure_permissions() {
         "${SCRIPT_DIR}/server/server.sh"
         "${SCRIPT_DIR}/server/monitoring.sh"
         "${SCRIPT_DIR}/server/update.sh"
+        "${SCRIPT_DIR}/server/pq_only_testmode.sh"
         "${SCRIPT_DIR}/server/tools/diagnostics.sh"
         "${SCRIPT_DIR}/client/keygen.sh"
         "${SCRIPT_DIR}/client/copy_key_to_server.sh"
@@ -89,6 +90,7 @@ ensure_permissions() {
         "${SCRIPT_DIR}/client/backup.sh"
         "${SCRIPT_DIR}/client/health_check.sh"
         "${SCRIPT_DIR}/client/key_rotation.sh"
+        "${SCRIPT_DIR}/client/migrate_keys.sh"
         "${SCRIPT_DIR}/client/tools/debug.sh"
         "${SCRIPT_DIR}/client/tools/performance_test.sh"
     )
@@ -243,14 +245,15 @@ handle_server_menu() {
 
         local choice
         choice=$(whiptail --title "Evaemon v${VERSION} — Server" \
-            --menu "Server Configuration:" "$BOX_H" "$BOX_W" 7 \
+            --menu "Server Configuration:" "$BOX_H" "$BOX_W" 8 \
             "1" "${build_label}" \
             "2" "Configure sshd" \
             "3" "Monitor sshd" \
             "4" "Update / Rebuild" \
-            "5" "Diagnostics" \
-            "6" "Back to Main Menu" \
-            "7" "Exit" \
+            "5" "PQ-Only Test Mode (experimental)" \
+            "6" "Diagnostics" \
+            "7" "Back to Main Menu" \
+            "8" "Exit" \
             3>&1 1>&2 2>&3) || return 0
 
         case "$choice" in
@@ -258,9 +261,10 @@ handle_server_menu() {
             2) run_sub "Server Configuration" "${SCRIPT_DIR}/server/server.sh" ;;
             3) run_sub "sshd Monitor"         "${SCRIPT_DIR}/server/monitoring.sh" ;;
             4) run_sub "Update / Rebuild"     "${SCRIPT_DIR}/server/update.sh" ;;
-            5) run_sub "Diagnostics"          "${SCRIPT_DIR}/server/tools/diagnostics.sh" ;;
-            6) return 0 ;;
-            7) exit 0 ;;
+            5) run_sub "PQ-Only Test Mode"    "${SCRIPT_DIR}/server/pq_only_testmode.sh" ;;
+            6) run_sub "Diagnostics"          "${SCRIPT_DIR}/server/tools/diagnostics.sh" ;;
+            7) return 0 ;;
+            8) exit 0 ;;
         esac
     done
 }
@@ -276,7 +280,7 @@ handle_client_menu() {
 
         local choice
         choice=$(whiptail --title "Evaemon v${VERSION} — Client" \
-            --menu "Client Configuration:" "$BOX_H" "$BOX_W" 11 \
+            --menu "Client Configuration:" "$BOX_H" "$BOX_W" 12 \
             "1"  "${build_label}" \
             "2"  "Generate Keys" \
             "3"  "Copy Key to Server" \
@@ -284,10 +288,11 @@ handle_client_menu() {
             "5"  "Backup / Restore Keys" \
             "6"  "Health Check" \
             "7"  "Rotate Keys" \
-            "8"  "Debug Tools" \
-            "9"  "Performance Benchmark" \
-            "10" "Back to Main Menu" \
-            "11" "Exit" \
+            "8"  "Migrate Classical Keys to PQ" \
+            "9"  "Debug Tools" \
+            "10" "Performance Benchmark" \
+            "11" "Back to Main Menu" \
+            "12" "Exit" \
             3>&1 1>&2 2>&3) || return 0
 
         case "$choice" in
@@ -298,10 +303,11 @@ handle_client_menu() {
             5)  run_sub "Backup / Restore"      "${SCRIPT_DIR}/client/backup.sh" ;;
             6)  run_sub "Health Check"          "${SCRIPT_DIR}/client/health_check.sh" ;;
             7)  run_sub "Key Rotation"          "${SCRIPT_DIR}/client/key_rotation.sh" ;;
-            8)  run_sub "Debug Tools"           "${SCRIPT_DIR}/client/tools/debug.sh" ;;
-            9)  run_sub "Performance Benchmark" "${SCRIPT_DIR}/client/tools/performance_test.sh" ;;
-            10) return 0 ;;
-            11) exit 0 ;;
+            8)  run_sub "Key Migration"         "${SCRIPT_DIR}/client/migrate_keys.sh" ;;
+            9)  run_sub "Debug Tools"           "${SCRIPT_DIR}/client/tools/debug.sh" ;;
+            10) run_sub "Performance Benchmark" "${SCRIPT_DIR}/client/tools/performance_test.sh" ;;
+            11) return 0 ;;
+            12) exit 0 ;;
         esac
     done
 }
