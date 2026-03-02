@@ -6,18 +6,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../shared/config.sh"
 source "${SCRIPT_DIR}/../shared/functions.sh"
 
-list_keys() {
-    echo "Available public keys in ${SSH_DIR}:"
-    local keys=()
+# Populate the script-level PUB_KEYS array and print the numbered list.
+# Returns 1 (and exits with an error message) if no keys are found.
+_load_and_list_keys() {
+    PUB_KEYS=()
     while IFS= read -r -d '' f; do
-        keys+=("$f")
+        PUB_KEYS+=("$f")
     done < <(find "${SSH_DIR}" -maxdepth 1 -name "*.pub" -print0 2>/dev/null | sort -z)
-    if [[ ${#keys[@]} -eq 0 ]]; then
-        echo "No public keys found in ${SSH_DIR}. Please generate a key first."
-        exit 1
+    if [[ ${#PUB_KEYS[@]} -eq 0 ]]; then
+        log_error "No public keys found in ${SSH_DIR}. Please generate a key first."
+        return 1
     fi
-    for i in "${!keys[@]}"; do
-        echo "$((i+1)). ${keys[$i]}"
+    echo "Available public keys in ${SSH_DIR}:"
+    for i in "${!PUB_KEYS[@]}"; do
+        echo "$((i+1)). ${PUB_KEYS[$i]}"
     done
 }
 
@@ -67,14 +69,10 @@ main() {
 
     echo
     echo "Select the public key to copy:"
-    list_keys
+    _load_and_list_keys || exit 1
     read -rp "Select a key by number: " choice
-    local keys=()
-    while IFS= read -r -d '' f; do
-        keys+=("$f")
-    done < <(find "${SSH_DIR}" -maxdepth 1 -name "*.pub" -print0 2>/dev/null | sort -z)
-    validate_algorithm_choice "$choice" "${#keys[@]}" || exit 1
-    local public_key_file="${keys[$((choice-1))]}"
+    validate_algorithm_choice "$choice" "${#PUB_KEYS[@]}" || exit 1
+    local public_key_file="${PUB_KEYS[$((choice-1))]}"
     log_info "Selected key: ${public_key_file}"
 
     copy_client_key "${server_host}" "${server_user}" "${public_key_file}" "${server_port}"

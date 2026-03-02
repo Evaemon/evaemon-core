@@ -20,11 +20,12 @@ if ! command -v whiptail &>/dev/null; then
     exit 1
 fi
 
-# Get terminal dimensions with fallback
+# Get terminal dimensions with fallback and minimum values so whiptail
+# menus are never smaller than their content.
 TERM_H=$(tput lines 2>/dev/null || echo 24)
 TERM_W=$(tput cols 2>/dev/null || echo 80)
-BOX_H=$((TERM_H - 4))
-BOX_W=$((TERM_W - 10))
+BOX_H=$(( TERM_H > 24 ? TERM_H - 4 : 20 ))
+BOX_W=$(( TERM_W > 60 ? TERM_W - 10 : 60 ))
 
 ensure_permissions() {
     local scripts=(
