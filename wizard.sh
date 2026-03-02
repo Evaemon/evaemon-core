@@ -2,8 +2,10 @@
 set -eo pipefail
 
 # Resolve the project root from the wizard's own location so the script works
-# regardless of the current working directory (M3 fix).
+# regardless of the current working directory.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+VERSION="1.0.0"
 
 # Check if script is run as root
 if [ "$EUID" -ne 0 ]; then
@@ -11,7 +13,19 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Ensure scripts have execution permissions
+# Check whiptail availability
+if ! command -v whiptail &>/dev/null; then
+    echo "whiptail is required but not installed."
+    echo "Install it with: apt install whiptail"
+    exit 1
+fi
+
+# Get terminal dimensions with fallback
+TERM_H=$(tput lines 2>/dev/null || echo 24)
+TERM_W=$(tput cols 2>/dev/null || echo 80)
+BOX_H=$((TERM_H - 4))
+BOX_W=$((TERM_W - 10))
+
 ensure_permissions() {
     local scripts=(
         "${SCRIPT_DIR}/build_oqs_openssh.sh"
@@ -30,256 +44,129 @@ ensure_permissions() {
     )
 
     for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            chmod +x "$script"
-        else
-            echo "Warning: optional script not found, skipping: $script"
-        fi
+        [ -f "$script" ] && chmod +x "$script"
     done
 }
 
-print_header() {
+oqs_is_built() {
+    [ -x "${SCRIPT_DIR}/build/bin/ssh" ]
+}
+
+# Run a sub-script in a clean terminal view, then wait for user before returning
+run_sub() {
+    local title="$1"
+    local script="$2"
+    shift 2
     clear
-    echo "================================================"
-    echo "              Evaemon Wizard"
-    echo "================================================"
+    echo "=== ${title} ==="
     echo
-}
-
-show_mode_selection() {
-    echo "Is this machine a server or client?"
-    echo "1. Server"
-    echo "2. Client"
-    echo "3. Exit"
-    echo
-}
-
-show_server_menu() {
-    echo "Server Configuration Options:"
-    echo "1. Build and install OQS-OpenSSH"
-    echo "2. Configure Server"
-    echo "3. Monitor sshd"
-    echo "4. Update / Rebuild"
-    echo "5. Diagnostics"
-    echo "6. Back to mode selection"
-    echo "7. Exit"
-    echo
-}
-
-show_client_menu() {
-    echo "Client Configuration Options:"
-    echo "1. Build and install OQS-OpenSSH"
-    echo "2. Generate Keys"
-    echo "3. Copy Key to Server"
-    echo "4. Connect to Server"
-    echo "5. Backup / Restore Keys"
-    echo "6. Health Check"
-    echo "7. Rotate Keys"
-    echo "8. Debug Tools"
-    echo "9. Performance Benchmark"
-    echo "10. Back to mode selection"
-    echo "11. Exit"
-    echo
+    if bash "$script" "$@"; then
+        echo
+        echo "Done. Press Enter to return to the menu..."
+    else
+        echo
+        echo "An error occurred. Press Enter to return to the menu..."
+    fi
+    read -r
 }
 
 handle_build() {
     local mode="${1:-client}"
-    echo "Starting OQS-OpenSSH build process..."
-    if bash "${SCRIPT_DIR}/build_oqs_openssh.sh" "${mode}"; then
-        echo "Build completed successfully!"
-    else
-        echo "Build process failed. Please check the logs."
-        exit 1
+    if oqs_is_built; then
+        if ! whiptail --title "Evaemon v${VERSION}" \
+            --yesno "OQS-OpenSSH is already built.\n\nRebuild anyway?" 9 52; then
+            return 0
+        fi
     fi
-}
-
-handle_server() {
-    echo "Starting server configuration..."
-    bash "${SCRIPT_DIR}/server/server.sh"
-}
-
-handle_monitoring() {
-    echo "Starting sshd monitor..."
-    bash "${SCRIPT_DIR}/server/monitoring.sh"
-}
-
-handle_update() {
-    echo "Starting update process..."
-    bash "${SCRIPT_DIR}/server/update.sh"
-}
-
-handle_diagnostics() {
-    echo "Starting diagnostics..."
-    bash "${SCRIPT_DIR}/server/tools/diagnostics.sh"
-}
-
-handle_keygen() {
-    echo "Starting key generation..."
-    bash "${SCRIPT_DIR}/client/keygen.sh"
-}
-
-handle_copy_key() {
-    echo "Starting key copy process..."
-    bash "${SCRIPT_DIR}/client/copy_key_to_server.sh"
-}
-
-handle_connect() {
-    echo "Starting SSH connection..."
-    bash "${SCRIPT_DIR}/client/connect.sh"
-}
-
-handle_backup() {
-    echo "Starting backup/restore tool..."
-    bash "${SCRIPT_DIR}/client/backup.sh"
-}
-
-handle_health_check() {
-    echo "Starting health check..."
-    bash "${SCRIPT_DIR}/client/health_check.sh"
-}
-
-handle_key_rotation() {
-    echo "Starting key rotation..."
-    bash "${SCRIPT_DIR}/client/key_rotation.sh"
-}
-
-handle_debug() {
-    echo "Starting debug tool..."
-    bash "${SCRIPT_DIR}/client/tools/debug.sh"
-}
-
-handle_performance_test() {
-    echo "Starting performance benchmark..."
-    bash "${SCRIPT_DIR}/client/tools/performance_test.sh"
+    clear
+    echo "=== Building OQS-OpenSSH (${mode} mode) ==="
+    echo
+    if bash "${SCRIPT_DIR}/build_oqs_openssh.sh" "${mode}"; then
+        echo
+        echo "Build successful! Press Enter to continue..."
+    else
+        echo
+        echo "Build failed. Please check the output above. Press Enter to continue..."
+    fi
+    read -r
 }
 
 handle_server_menu() {
     while true; do
-        print_header
-        show_server_menu
-        read -rp "Enter your choice: " choice
-        echo
+        local choice
+        choice=$(whiptail --title "Evaemon v${VERSION} - Server" \
+            --menu "Server Configuration Options:" "$BOX_H" "$BOX_W" 7 \
+            "1" "Build and install OQS-OpenSSH" \
+            "2" "Configure Server" \
+            "3" "Monitor sshd" \
+            "4" "Update / Rebuild" \
+            "5" "Diagnostics" \
+            "6" "Back" \
+            "7" "Exit" \
+            3>&1 1>&2 2>&3) || return 0
 
-        case $choice in
-            1)
-                handle_build server
-                read -rp "Press Enter to continue..."
-                ;;
-            2)
-                handle_server
-                read -rp "Press Enter to continue..."
-                ;;
-            3)
-                handle_monitoring
-                read -rp "Press Enter to continue..."
-                ;;
-            4)
-                handle_update
-                read -rp "Press Enter to continue..."
-                ;;
-            5)
-                handle_diagnostics
-                read -rp "Press Enter to continue..."
-                ;;
-            6)
-                return
-                ;;
-            7)
-                echo "Thank you for using Evaemon!"
-                exit 0
-                ;;
-            *)
-                echo "Invalid choice. Please try again."
-                read -rp "Press Enter to continue..."
-                ;;
+        case "$choice" in
+            1) handle_build server ;;
+            2) run_sub "Server Configuration" "${SCRIPT_DIR}/server/server.sh" ;;
+            3) run_sub "sshd Monitor"          "${SCRIPT_DIR}/server/monitoring.sh" ;;
+            4) run_sub "Update / Rebuild"      "${SCRIPT_DIR}/server/update.sh" ;;
+            5) run_sub "Diagnostics"           "${SCRIPT_DIR}/server/tools/diagnostics.sh" ;;
+            6) return 0 ;;
+            7) exit 0 ;;
         esac
     done
 }
 
 handle_client_menu() {
     while true; do
-        print_header
-        show_client_menu
-        read -rp "Enter your choice: " choice
-        echo
+        local choice
+        choice=$(whiptail --title "Evaemon v${VERSION} - Client" \
+            --menu "Client Configuration Options:" "$BOX_H" "$BOX_W" 11 \
+            "1"  "Build and install OQS-OpenSSH" \
+            "2"  "Generate Keys" \
+            "3"  "Copy Key to Server" \
+            "4"  "Connect to Server" \
+            "5"  "Backup / Restore Keys" \
+            "6"  "Health Check" \
+            "7"  "Rotate Keys" \
+            "8"  "Debug Tools" \
+            "9"  "Performance Benchmark" \
+            "10" "Back" \
+            "11" "Exit" \
+            3>&1 1>&2 2>&3) || return 0
 
-        case $choice in
-            1)
-                handle_build client
-                read -rp "Press Enter to continue..."
-                ;;
-            2)
-                handle_keygen
-                read -rp "Press Enter to continue..."
-                ;;
-            3)
-                handle_copy_key
-                read -rp "Press Enter to continue..."
-                ;;
-            4)
-                handle_connect
-                read -rp "Press Enter to continue..."
-                ;;
-            5)
-                handle_backup
-                read -rp "Press Enter to continue..."
-                ;;
-            6)
-                handle_health_check
-                read -rp "Press Enter to continue..."
-                ;;
-            7)
-                handle_key_rotation
-                read -rp "Press Enter to continue..."
-                ;;
-            8)
-                handle_debug
-                read -rp "Press Enter to continue..."
-                ;;
-            9)
-                handle_performance_test
-                read -rp "Press Enter to continue..."
-                ;;
-            10)
-                return
-                ;;
-            11)
-                echo "Thank you for using Evaemon!"
-                exit 0
-                ;;
-            *)
-                echo "Invalid choice. Please try again."
-                read -rp "Press Enter to continue..."
-                ;;
+        case "$choice" in
+            1)  handle_build client ;;
+            2)  run_sub "Key Generation"       "${SCRIPT_DIR}/client/keygen.sh" ;;
+            3)  run_sub "Copy Key to Server"   "${SCRIPT_DIR}/client/copy_key_to_server.sh" ;;
+            4)  run_sub "SSH Connection"       "${SCRIPT_DIR}/client/connect.sh" ;;
+            5)  run_sub "Backup / Restore"     "${SCRIPT_DIR}/client/backup.sh" ;;
+            6)  run_sub "Health Check"         "${SCRIPT_DIR}/client/health_check.sh" ;;
+            7)  run_sub "Key Rotation"         "${SCRIPT_DIR}/client/key_rotation.sh" ;;
+            8)  run_sub "Debug Tools"          "${SCRIPT_DIR}/client/tools/debug.sh" ;;
+            9)  run_sub "Performance Benchmark" "${SCRIPT_DIR}/client/tools/performance_test.sh" ;;
+            10) return 0 ;;
+            11) exit 0 ;;
         esac
     done
 }
 
 main() {
-    # Check and set permissions at startup
     ensure_permissions
 
     while true; do
-        print_header
-        show_mode_selection
-        read -rp "Enter your choice (1-3): " mode_choice
-        echo
+        local choice
+        choice=$(whiptail --title "Evaemon v${VERSION}" \
+            --menu "Is this machine a server or client?" "$BOX_H" "$BOX_W" 3 \
+            "1" "Server" \
+            "2" "Client" \
+            "3" "Exit" \
+            3>&1 1>&2 2>&3) || exit 0
 
-        case $mode_choice in
-            1)
-                handle_server_menu
-                ;;
-            2)
-                handle_client_menu
-                ;;
-            3)
-                echo "Thank you for using Evaemon!"
-                exit 0
-                ;;
-            *)
-                echo "Invalid choice. Please try again."
-                read -rp "Press Enter to continue..."
-                ;;
+        case "$choice" in
+            1) handle_server_menu ;;
+            2) handle_client_menu ;;
+            3) exit 0 ;;
         esac
     done
 }
