@@ -26,7 +26,13 @@ OPENSSL_SYS_DIR="/usr"
 # invoking user's home directory.  Use $SUDO_USER (set by sudo) to find the
 # real home so all scripts consistently look in the correct ~/.ssh directory.
 if [[ -n "${SUDO_USER}" ]]; then
-    SSH_DIR="$(getent passwd "${SUDO_USER}" | cut -d: -f6)/.ssh"
+    _sudo_home="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    if [[ -z "${_sudo_home}" ]]; then
+        echo "ERROR: cannot resolve home directory for SUDO_USER='${SUDO_USER}'" >&2
+        exit 1
+    fi
+    SSH_DIR="${_sudo_home}/.ssh"
+    unset _sudo_home
 else
     SSH_DIR="${HOME}/.ssh"
 fi

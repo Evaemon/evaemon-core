@@ -190,6 +190,9 @@ main() {
         old_key="$(find "${SSH_DIR}" -maxdepth 1 \
             -name "id_${old_algo}.retired_*" ! -name "*.pub" -print 2>/dev/null \
             | sort -r | head -1)"
+        if [[ -z "$old_key" ]]; then
+            log_fatal "Could not locate the archived ${old_algo} key in ${SSH_DIR}. Cannot continue rotation."
+        fi
         old_pub="${old_key%.retired_*}.pub.retired_${old_key##*.retired_}"
     fi
 

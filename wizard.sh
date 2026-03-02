@@ -33,8 +33,7 @@ ensure_permissions() {
         if [ -f "$script" ]; then
             chmod +x "$script"
         else
-            echo "Error: $script not found"
-            exit 1
+            echo "Warning: optional script not found, skipping: $script"
         fi
     done
 }
