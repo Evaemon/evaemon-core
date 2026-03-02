@@ -50,6 +50,30 @@ TERM_W=$(tput cols  2>/dev/null || echo 80)
 BOX_H=$(( TERM_H > 24 ? TERM_H - 4 : 20 ))
 BOX_W=$(( TERM_W > 60 ? TERM_W - 10 : 60 ))
 
+# ── Splash screen ─────────────────────────────────────────────────────────────
+# Shown once at startup in the terminal (before the first whiptail dialog).
+# Uses ANSI cyan on black to match the NEWT_COLORS theme.
+show_splash() {
+    clear
+    # Cyan
+    printf '\033[0;36m'
+    cat << 'LOGO'
+
+  ███████╗ ██╗   ██╗  █████╗  ███████╗ ███╗   ███╗  ██████╗  ███╗  ██╗
+  ██╔════╝ ╚██╗ ██╔╝ ██╔══██╗ ██╔════╝ ████╗ ████║ ██╔═══██╗ ████╗ ██║
+  █████╗    ╚████╔╝  ███████║ █████╗   ██╔████╔██║ ██║   ██║ ██╔██╗██║
+  ██╔══╝    ╔███╔╝   ██╔══██║ ██╔══╝   ██║╚██╔╝██║ ██║   ██║ ██║╚████║
+  ███████╗   ██║     ██║  ██║ ███████╗ ██║ ╚═╝ ██║ ╚██████╔╝ ██║ ╚███║
+  ╚══════╝   ╚═╝     ╚═╝  ╚═╝ ╚══════╝ ╚═╝     ╚═╝  ╚═════╝  ╚═╝  ╚══╝
+
+LOGO
+    # Dim white for tagline
+    printf '\033[0;37m'
+    printf '  %s\n\n' '──  The last infrastructure.  ──'
+    printf '\033[0m'
+    sleep 1.5
+}
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 ensure_permissions() {
@@ -81,27 +105,44 @@ _oqs_status_label() {
     if oqs_is_built; then echo "INSTALLED"; else echo "NOT BUILT"; fi
 }
 
-# ── Build (runs in background with a gauge) ───────────────────────────────────
+# ── Build (runs in background with a step-aware gauge) ────────────────────────
+#
+# whiptail --gauge supports the dialog XXX protocol: sending
+#   XXX\n<pct>\n<new description>\nXXX\n
+# updates both the progress bar AND the description text in real time.
+# This lets us show "Step N/7 — <what is happening>" as the build progresses.
 
-# Emit progress percentages to stdout by inspecting the build log.
-# Runs in a subshell (piped to whiptail --gauge); exits when build_pid ends.
 _build_gauge() {
     local pid="$1"
     local pct=0
+    local msg="  Preparing build environment..."
+
+    # Emit an initial state so the gauge is not empty at startup.
+    printf 'XXX\n%d\n%s\nXXX\n' "$pct" "$msg"
+
     while kill -0 "$pid" 2>/dev/null; do
-        if   grep -q "Installation Complete"   "${BUILD_LOG}" 2>/dev/null; then pct=98
-        elif grep -q "Setting up shared"       "${BUILD_LOG}" 2>/dev/null; then pct=85
-        elif grep -q "make install"            "${BUILD_LOG}" 2>/dev/null; then pct=78
-        elif grep -q "Building OpenSSH"        "${BUILD_LOG}" 2>/dev/null; then pct=55
-        elif grep -q "Cloning OpenSSH"         "${BUILD_LOG}" 2>/dev/null; then pct=42
-        elif grep -q "Building liboqs"         "${BUILD_LOG}" 2>/dev/null; then pct=18
-        elif grep -q "Cloning liboqs"          "${BUILD_LOG}" 2>/dev/null; then pct=8
-        elif grep -q "Installing dependencies" "${BUILD_LOG}" 2>/dev/null; then pct=3
+        if   grep -q "Installation Complete"   "${BUILD_LOG}" 2>/dev/null; then
+            pct=98; msg="  Step 7/7  —  Finalizing installation"
+        elif grep -q "Setting up shared"       "${BUILD_LOG}" 2>/dev/null; then
+            pct=85; msg="  Step 6/7  —  Linking shared libraries"
+        elif grep -q "Building OpenSSH"        "${BUILD_LOG}" 2>/dev/null; then
+            pct=55; msg="  Step 5/7  —  Compiling OpenSSH"
+        elif grep -q "Cloning OpenSSH"         "${BUILD_LOG}" 2>/dev/null; then
+            pct=42; msg="  Step 4/7  —  Cloning OpenSSH"
+        elif grep -q "Building liboqs"         "${BUILD_LOG}" 2>/dev/null; then
+            pct=18; msg="  Step 3/7  —  Building liboqs"
+        elif grep -q "Cloning liboqs"          "${BUILD_LOG}" 2>/dev/null; then
+            pct=8;  msg="  Step 2/7  —  Cloning liboqs"
+        elif grep -q "Installing dependencies" "${BUILD_LOG}" 2>/dev/null; then
+            pct=3;  msg="  Step 1/7  —  Installing dependencies"
         fi
-        printf '%d\n' "$pct"
+        printf 'XXX\n%d\n%s\nXXX\n' "$pct" "$msg"
         sleep 1
     done
-    printf '100\n'
+
+    # Signal completion.
+    printf 'XXX\n100\n  Step 7/7  —  Installation complete!\nXXX\n'
+    sleep 0.4
 }
 
 handle_build() {
@@ -117,20 +158,16 @@ handle_build() {
     mkdir -p "${SCRIPT_DIR}/build"
 
     # Launch build in background; stdin closed so the test-suite prompt is
-    # automatically skipped (the script detects non-interactive stdin).
+    # automatically skipped (build_oqs_openssh.sh detects non-interactive stdin).
     bash "${SCRIPT_DIR}/build_oqs_openssh.sh" "${mode}" </dev/null &
     local build_pid=$!
 
-    # Feed progress numbers to whiptail gauge until the build finishes.
+    # Stream step descriptions + percentages to the gauge.
     _build_gauge "$build_pid" | \
         whiptail \
             --title "Evaemon — Compiling OQS Stack" \
-            --gauge \
-"  Building post-quantum cryptography stack...
-  This takes 5-15 minutes on first run.
-
-  Log: ${BUILD_LOG}" \
-            11 64 0 2>/dev/null || true
+            --gauge "  Initializing..." \
+            9 62 0 2>/dev/null || true
 
     # Reap the background process and capture its exit code.
     local exit_code=0
@@ -273,22 +310,7 @@ handle_client_menu() {
 
 main() {
     ensure_permissions
-
-    # Welcome screen — shown once at startup, not on every loop iteration.
-    whiptail --title "Evaemon v${VERSION}" \
-        --msgbox \
-"          Evaemon
-    The last infrastructure.
-
-  Post-quantum SSH hardening for systems that
-  cannot afford to be compromised tomorrow.
-
-  Powered by OQS-OpenSSH with NIST-standardised
-  algorithms: ML-DSA, Falcon, MAYO and more.
-
-  Run 'Build OQS-OpenSSH' first if this is a
-  new installation." \
-        16 56
+    show_splash
 
     while true; do
         local oqs_status menu_text
