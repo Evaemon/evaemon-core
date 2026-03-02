@@ -228,8 +228,8 @@ done
 describe "sshd_config generation — multi-algo"
 
 _A1="ssh-falcon1024"
-_A2="ssh-dilithium3"
-_A3="ssh-mldsa44"
+_A2="ssh-mldsa-65"
+_A3="ssh-mldsa-44"
 
 it "multi-algo config file is created"
 _create_sshd_config "${_A1}" "${_A2}"
@@ -369,10 +369,10 @@ it "PQ-only KexAlgorithms is exactly one line"
 kex_count="$(grep -c "^KexAlgorithms " "${TEST_CONFIG_FILE}" 2>/dev/null || echo 0)"
 assert_eq "1" "$kex_count"
 
-it "PQ-only KexAlgorithms contains a hybrid Kyber algorithm"
+it "PQ-only KexAlgorithms contains a hybrid ML-KEM algorithm"
 kex_line="$(grep "^KexAlgorithms " "${TEST_CONFIG_FILE}")"
-[[ "$kex_line" == *"kyber"* ]] \
-    && pass || fail "KexAlgorithms missing kyber algorithm: ${kex_line}"
+[[ "$kex_line" == *"mlkem"* ]] \
+    && pass || fail "KexAlgorithms missing ML-KEM algorithm: ${kex_line}"
 
 it "PQ-only KexAlgorithms does not include the classical-only curve25519-sha256"
 kex_line="$(grep "^KexAlgorithms " "${TEST_CONFIG_FILE}")"
@@ -394,10 +394,10 @@ _create_sshd_config "ed25519" "${_A1}"
 content="$(cat "${TEST_CONFIG_FILE}")"
 assert_contains "KexAlgorithms" "$content"
 
-it "hybrid KexAlgorithms contains a Kyber algorithm"
+it "hybrid KexAlgorithms contains a ML-KEM algorithm"
 kex_line="$(grep "^KexAlgorithms " "${TEST_CONFIG_FILE}")"
-[[ "$kex_line" == *"kyber"* ]] \
-    && pass || fail "hybrid KexAlgorithms missing kyber algorithm: ${kex_line}"
+[[ "$kex_line" == *"mlkem"* ]] \
+    && pass || fail "hybrid KexAlgorithms missing ML-KEM algorithm: ${kex_line}"
 
 it "hybrid KexAlgorithms contains classical fallback curve25519-sha256"
 kex_line="$(grep "^KexAlgorithms " "${TEST_CONFIG_FILE}")"
@@ -411,9 +411,9 @@ assert_eq "1" "$kex_count"
 it "PQ KEX algorithms appear before classical KEX in hybrid config"
 kex_line="$(grep "^KexAlgorithms " "${TEST_CONFIG_FILE}")"
 kex_val="${kex_line#KexAlgorithms }"
-# First entry must be one of the PQ KEX algorithms (contains 'kyber')
+# First entry must be one of the PQ KEX algorithms (contains 'mlkem')
 first_algo="${kex_val%%,*}"
-[[ "$first_algo" == *"kyber"* ]] \
+[[ "$first_algo" == *"mlkem"* ]] \
     && pass || fail "PQ KEX not first in KexAlgorithms: first was '${first_algo}'"
 
 # ── Done ─────────────────────────────────────────────────────────────────────

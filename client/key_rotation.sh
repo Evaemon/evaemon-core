@@ -16,6 +16,51 @@ source "${SCRIPT_DIR}/../shared/functions.sh"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+# check_key_age KEY_FILE
+# Returns 0 if the key is older than KEY_MAX_AGE_DAYS (default 90), 1 otherwise.
+# Prints a warning with the exact age if overdue.
+check_key_age() {
+    local key_file="$1"
+    [[ -f "$key_file" ]] || return 1
+
+    local max_age="${KEY_MAX_AGE_DAYS:-90}"
+    local now key_mtime age_days
+    now="$(date +%s)"
+    key_mtime="$(stat -c "%Y" "$key_file" 2>/dev/null || echo "$now")"
+    age_days="$(( (now - key_mtime) / 86400 ))"
+
+    if (( age_days >= max_age )); then
+        log_warn "Key ${key_file} is ${age_days} days old (max ${max_age}). Rotation is overdue."
+        return 0
+    else
+        log_info "Key ${key_file} is ${age_days} days old (max ${max_age}). Within policy."
+        return 1
+    fi
+}
+
+# verify_old_key_invalidated HOST PORT USER OLD_KEY OLD_ALGO
+# After rotation, confirm the old key can no longer authenticate.
+# This is the critical safety check: rotation is not complete until the
+# old credential is provably dead.
+verify_old_key_invalidated() {
+    local host="$1" port="$2" user="$3" old_key="$4" old_algo="$5"
+
+    [[ -f "$old_key" ]] || { log_info "Old key file not present — nothing to verify."; return 0; }
+
+    log_section "Verifying Old Key Is Invalidated"
+
+    if _ssh "${old_key}" "${old_algo}" \
+            -p "${port}" "${user}@${host}" "echo STILL_ALIVE" 2>/dev/null \
+            | grep -q "STILL_ALIVE"; then
+        log_error "OLD KEY STILL AUTHENTICATES! The server still accepts ${old_key}."
+        log_error "Remove it from the server's authorized_keys before considering rotation complete."
+        return 1
+    fi
+
+    log_success "Old key correctly rejected — rotation verified."
+    return 0
+}
+
 _ssh() {
     local key="$1"; shift
     local algo="$1"; shift
@@ -171,6 +216,17 @@ main() {
     local old_pub="${old_key}.pub"
     validate_file_exists "$old_key" || log_fatal "Current private key not found: ${old_key}"
 
+    # ── 90-day rotation policy check ─────────────────────────────────────
+    if check_key_age "$old_key"; then
+        log_warn "Key rotation is OVERDUE per the ${KEY_MAX_AGE_DAYS}-day policy."
+    else
+        read -rp "Key is still within rotation policy. Continue anyway? (y/N): " force_rotate
+        if [[ "${force_rotate}" != "y" && "${force_rotate}" != "Y" ]]; then
+            log_info "Rotation cancelled. Current key is still within the ${KEY_MAX_AGE_DAYS}-day window."
+            return 0
+        fi
+    fi
+
     echo
     log_info "Select the NEW algorithm for the rotated key:"
     list_algorithms
@@ -203,6 +259,10 @@ main() {
     read -rp "Remove old key from server's authorized_keys? (y/N): " remove_old
     if [[ "${remove_old}" == "y" || "${remove_old}" == "Y" ]]; then
         remove_old_key_from_server "$server_host" "$server_port" "$server_user" "$new_algo" "$old_pub"
+
+        # Verify the old key is truly invalidated on the server.
+        verify_old_key_invalidated "$server_host" "$server_port" "$server_user" "$old_key" "$old_algo" \
+            || log_warn "Post-rotation validation failed — old key may still be active. Investigate."
     else
         log_warn "Old key left on server. Remove it manually when you are confident the new key works."
     fi

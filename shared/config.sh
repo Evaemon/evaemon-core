@@ -37,23 +37,39 @@ else
     SSH_DIR="${HOME}/.ssh"
 fi
 
-# Supported algorithms — names must match OQS-OpenSSH OQS-v10 / liboqs 0.11.0.
+# Supported algorithms — names must match OQS-OpenSSH OQS-v10 / liboqs 0.11.0+.
 # OQS-v10 dropped the old Dilithium and SPHINCS+-haraka/robust names:
 #   dilithium2/3/5        → mldsa-44/65/87  (NIST FIPS 204 / ML-DSA)
 #   sphincsharaka*        → removed entirely
 #   sphincssha256*robust  → sphincssha2*fsimple
+#
+# Ordering: multi-family risk diversification — top 3 from different families:
+#   1. Falcon-1024    — lattice (NTRU), fastest verification, compact at L5
+#   2. ML-DSA-65      — lattice (Module-LWE), NIST FIPS 204 primary standard
+#   3. SPHINCS+-256f  — hash-based (FIPS 205), minimal cryptographic assumptions
+#   4. SLH-DSA-256f   — standardised FIPS 205 name (liboqs ≥ 0.12.0)
+# This ensures a break in any single mathematical assumption family does not
+# compromise all deployed keys simultaneously.
 ALGORITHMS=(
     "ssh-falcon1024"
-    "ssh-mldsa-87"
-    "ssh-sphincssha2128fsimple"
-    "ssh-sphincssha2256fsimple"
-    "ssh-falcon512"
     "ssh-mldsa-65"
+    "ssh-sphincssha2256fsimple"
+    "ssh-slhdsa-sha2-256f"
+    "ssh-mldsa-87"
     "ssh-mldsa-44"
+    "ssh-sphincssha2128fsimple"
+    "ssh-slhdsa-sha2-128f"
+    "ssh-falcon512"
     "ssh-mayo2"
     "ssh-mayo3"
     "ssh-mayo5"
 )
+
+# Maximum key age in days before rotation is enforced.
+KEY_MAX_AGE_DAYS="${KEY_MAX_AGE_DAYS:-90}"
+
+# Classical key types that the migration scanner flags for replacement.
+CLASSICAL_KEY_PATTERNS=("ssh-rsa" "ssh-dss" "ecdsa-sha2-nistp256" "ecdsa-sha2-nistp384" "ecdsa-sha2-nistp521" "ssh-ed25519")
 
 # Classical key types for hybrid mode (passed to ssh-keygen -t)
 CLASSICAL_KEYTYPES=("ed25519" "rsa")
